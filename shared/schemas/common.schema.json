@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/common.schema.json",
+  "title": "Common contract definitions",
+  "description": "Shared types for all AgentChaos resource contracts. Every resource schema references these definitions. Identifier and enum conventions are recorded in docs/architecture/0002-contract-conventions.md. The .invalid top-level domain marks a working-name product whose public naming is unresolved (spec S01).",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "apiVersion": {
+      "type": "string",
+      "enum": ["v1"],
+      "description": "Contract version this instance claims. Unknown values fail validation; contract changes require a new version."
+    },
+    "tenantId": {
+      "type": "string",
+      "pattern": "^tnt_[a-z0-9]{8,64}$",
+      "description": "Tenant identifier. Bound server-side to the authenticated identity; request bodies never override it (spec 18.3)."
+    },
+    "idWorkloadVersion": {
+      "type": "string",
+      "pattern": "^wlv_[a-z0-9]{8,64}$"
+    },
+    "idAutonomyProfile": {
+      "type": "string",
+      "pattern": "^aup_[a-z0-9]{8,64}$"
+    },
+    "idScenarioVersion": {
+      "type": "string",
+      "pattern": "^scn_[a-z0-9]{8,64}$"
+    },
+    "idExperiment": {
+      "type": "string",
+      "pattern": "^exp_[a-z0-9]{8,64}$"
+    },
+    "idRun": {
+      "type": "string",
+      "pattern": "^run_[a-z0-9]{8,64}$"
+    },
+    "idDelegation": {
+      "type": "string",
+      "pattern": "^dlg_[a-z0-9]{8,64}$"
+    },
+    "idEffect": {
+      "type": "string",
+      "pattern": "^eff_[a-z0-9]{8,64}$"
+    },
+    "idEvidenceEvent": {
+      "type": "string",
+      "pattern": "^evt_[a-z0-9]{8,64}$"
+    },
+    "idFinding": {
+      "type": "string",
+      "pattern": "^fnd_[a-z0-9]{8,64}$"
+    },
+    "idAssuranceClaim": {
+      "type": "string",
+      "pattern": "^clm_[a-z0-9]{8,64}$"
+    },
+    "idActor": {
+      "type": "string",
+      "pattern": "^act_[a-z0-9][a-z0-9-]{3,63}$",
+      "description": "Worker, subagent, reviewer, or service actor identity."
+    },
+    "idSource": {
+      "type": "string",
+      "pattern": "^src_[a-z0-9][a-z0-9-]{3,63}$",
+      "description": "Authoritative event source identity, for example a collector or the broker."
+    },
+    "idTarget": {
+      "type": "string",
+      "pattern": "^tgt_[a-z0-9]{8,64}$",
+      "description": "Explicitly enrolled target environment identifier (spec 7, AC-002)."
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$",
+      "description": "RFC 3339 timestamp in UTC with an explicit Z. Clock uncertainty is recorded separately on evidence events."
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 content digest, lowercase hex, sha256: prefix."
+    },
+    "semVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$",
+      "description": "Semantic version of a versioned resource."
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$",
+      "description": "Single-use random token bound into an effect authorization (spec 10)."
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "pattern": "^idk_[A-Za-z0-9_-]{8,128}$",
+      "description": "Client-generated idempotency key for API mutations (spec 18.3)."
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "description": "Detached signature over the canonical bytes of the signed object. Verification is a service responsibility (task T038); the contract only fixes the fields.",
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["ed25519"]
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^key_[a-z0-9][a-z0-9-]{3,63}$"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+          "minLength": 64,
+          "maxLength": 512,
+          "description": "Base64 signature bytes."
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "micros"],
+      "description": "Monetary amount in integer micro-units to avoid floating-point accounting.",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "micros": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "actionClass": {
+      "type": "string",
+      "enum": ["A0", "A1", "A2", "A3"],
+      "description": "Action classes from spec 6.1. A3 is not authorized in beta, so resource schemas that must exclude it inline a narrowed A0-A2 list instead of referencing this definition."
+    },
+    "runtimeState": {
+      "type": "string",
+      "enum": ["NORMAL", "WATCH", "RESTRICTED", "QUARANTINED", "TERMINATED"],
+      "description": "Worker runtime states from spec 6.2."
+    },
+    "operatingMode": {
+      "type": "string",
+      "enum": [
+        "observe",
+        "replay",
+        "isolated_reexecution",
+        "production_synthetic",
+        "customer_canary",
+        "govern"
+      ],
+      "description": "Operating modes from spec 7."
+    },
+    "effectState": {
+      "type": "string",
+      "enum": [
+        "PROPOSED",
+        "AUTHORIZED",
+        "PREPARED",
+        "COMMITTING",
+        "COMMITTED",
+        "DENIED",
+        "EXPIRED",
+        "CANCELLED",
+        "UNKNOWN_EFFECT",
+        "COMPENSATING"
+      ],
+      "description": "Effect lifecycle states from spec 10.1."
+    },
+    "runOutcome": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "INCONCLUSIVE", "NOT_TRIGGERED", "HARNESS_ERROR"],
+      "description": "Run result labels from spec 9.2."
+    },
+    "terminalState": {
+      "type": "string",
+      "enum": ["CLEAN", "DIRTY_QUARANTINED", "UNKNOWN"],
+      "description": "Cleanup terminal states from spec 13.3. Never inferred from worker exit."
+    },
+    "reviewVerdict": {
+      "type": "string",
+      "enum": ["ALLOW", "WATCH", "DENY", "ABSTAIN"],
+      "description": "Machine review verdicts from spec 11.2. ABSTAIN is not a benign verdict."
+    },
+    "assuranceStatus": {
+      "type": "string",
+      "enum": [
+        "SUPPORTED_WITHIN_SCOPE",
+        "TARGET_NOT_DEMONSTRATED",
+        "VIOLATED",
+        "INSUFFICIENT_EVIDENCE",
+        "STALE"
+      ],
+      "description": "Assurance claim statuses from spec 14.1."
+    },
+    "severityClass": {
+      "type": "string",
+      "enum": ["H0", "H1", "H2", "H3"],
+      "description": "Severity classes from spec 14.6. H2 and H3 are hard containment triggers."
+    },
+    "trustLabel": {
+      "type": "string",
+      "enum": ["worker_claim", "collector_fact", "monitor_interpretation"],
+      "description": "Trust labels from spec 9.4 and AC-012. Worker-generated transcripts are lower-trust evidence."
+    },
+    "evidenceKind": {
+      "type": "string",
+      "enum": [
+        "proposed_action",
+        "broker_decision",
+        "resource_access",
+        "tool_request",
+        "tool_response",
+        "external_receipt",
+        "delegation",
+        "budget_change",
+        "injection_receipt",
+        "collector_heartbeat",
+        "recovery_action"
+      ],
+      "description": "Evidence event kinds collected per spec 9.4."
+    },
+    "faultKind": {
+      "type": "string",
+      "enum": [
+        "model_response",
+        "tool_result",
+        "file",
+        "memory_snapshot",
+        "peer_channel",
+        "permission",
+        "dependency",
+        "budget",
+        "monitor_component"
+      ],
+      "description": "Fault adapter target surfaces from spec 9.3."
+    },
+    "evidenceCategory": {
+      "type": "string",
+      "enum": [
+        "production_incidence",
+        "challenge_set_failure",
+        "boundary_conformance",
+        "detector_performance"
+      ],
+      "description": "The four evidence categories that must stay separate, from spec 14.2."
+    },
+    "sandboxBackend": {
+      "type": "string",
+      "enum": ["local_container", "hardened_microvm"],
+      "description": "Execution backends from spec 8.2. The local container profile is for benign fixtures only."
+    }
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/finding.schema.json",
+  "title": "Finding",
+  "description": "A policy violation, anomaly, evidence gap, or uncertain result with versioned adjudication (spec 18.1). Every serious finding carries raw evidence and an independent outcome reference (spec 22.2, B8).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "category",
+    "severity",
+    "title",
+    "evidence_refs",
+    "state",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "Finding" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idFinding" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "experiment_id": { "$ref": "common.schema.json#/$defs/idExperiment" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "policy_violation",
+        "anomaly",
+        "evidence_gap",
+        "uncertain_result"
+      ],
+      "description": "Finding categories from spec 18.1. Gaps include missing events, sequence gaps, collector failures, and clock disagreement (spec 9.4)."
+    },
+    "severity": { "$ref": "common.schema.json#/$defs/severityClass" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_id"],
+        "properties": {
+          "event_id": { "$ref": "common.schema.json#/$defs/idEvidenceEvent" },
+          "note": { "type": "string", "maxLength": 2000 }
+        }
+      },
+      "description": "Raw evidence references. A finding without evidence is not representable (spec 9.4, B8)."
+    },
+    "outcome_reference": {
+      "$ref": "common.schema.json#/$defs/idEvidenceEvent",
+      "description": "Independent outcome reference. Required on serious findings (H2 and H3) per spec 22.2 B8. Links the finding to ground truth from outside the system under test."
+    },
+    "effect_id": { "$ref": "common.schema.json#/$defs/idEffect" },
+    "coverage_gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_event_kind", "source_id"],
+      "properties": {
+        "expected_event_kind": { "$ref": "common.schema.json#/$defs/evidenceKind" },
+        "source_id": { "$ref": "common.schema.json#/$defs/idSource" },
+        "expected_sequence_from": { "type": "integer", "minimum": 0 },
+        "expected_sequence_to": { "type": "integer", "minimum": 0 }
+      },
+      "description": "Concrete coverage gap for evidence_gap findings (spec 9.4, task T012)."
+    },
+    "detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before_effect", "latency_ms"],
+      "properties": {
+        "before_effect": {
+          "type": "boolean",
+          "description": "True only when the attempt was caught before the consequential effect; post-hoc flags are not prevention (spec 16)."
+        },
+        "latency_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600000,
+          "description": "First actionable signal to effective fencing (spec 16)."
+        }
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": ["open", "adjudicated", "dismissed"],
+      "description": "Adjudication is versioned; dismissed findings record why (spec 18.1)."
+    },
+    "adjudications": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "decision", "decided_by", "at", "rationale"],
+        "properties": {
+          "version": { "type": "integer", "minimum": 1 },
+          "decision": {
+            "type": "string",
+            "enum": ["confirmed", "false_positive", "wont_fix", "escalated"]
+          },
+          "decided_by": { "$ref": "common.schema.json#/$defs/idActor" },
+          "at": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+          "rationale": { "type": "string", "minLength": 1, "maxLength": 8000 }
+        }
+      }
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "state": { "enum": ["adjudicated", "dismissed"] } },
+        "required": ["state"]
+      },
+      "then": { "required": ["adjudications"] }
+    },
+    {
+      "if": {
+        "properties": { "category": { "const": "evidence_gap" } },
+        "required": ["category"]
+      },
+      "then": { "required": ["coverage_gap"] }
+    },
+    {
+      "if": {
+        "properties": { "severity": { "enum": ["H2", "H3"] } },
+        "required": ["severity"]
+      },
+      "then": { "required": ["outcome_reference"] },
+      "description": "A serious finding must cite an independent outcome reference. A serious claim with only internal evidence cannot be verified or rebutted (spec 22.2, B8)."
+    }
+  ]
+}

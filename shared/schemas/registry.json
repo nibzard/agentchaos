@@ -1,0 +1,73 @@
+{
+  "registry_version": 1,
+  "contract_base": "https://agentchaos.invalid/schemas/v1/",
+  "description": "Ordered registry of AgentChaos resource contracts. The acx_schemas loader reads this file; every entry must carry a matching kind const inside its schema (spec 18.1).",
+  "schemas": [
+    {
+      "name": "common",
+      "file": "common.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/common.schema.json",
+      "resource_kind": null
+    },
+    {
+      "name": "workload-version",
+      "file": "workload-version.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/workload-version.schema.json",
+      "resource_kind": "WorkloadVersion"
+    },
+    {
+      "name": "autonomy-profile",
+      "file": "autonomy-profile.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/autonomy-profile.schema.json",
+      "resource_kind": "AutonomyProfile"
+    },
+    {
+      "name": "scenario-version",
+      "file": "scenario-version.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/scenario-version.schema.json",
+      "resource_kind": "ScenarioVersion"
+    },
+    {
+      "name": "experiment",
+      "file": "experiment.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/experiment.schema.json",
+      "resource_kind": "Experiment"
+    },
+    {
+      "name": "run",
+      "file": "run.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/run.schema.json",
+      "resource_kind": "Run"
+    },
+    {
+      "name": "delegation",
+      "file": "delegation.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/delegation.schema.json",
+      "resource_kind": "Delegation"
+    },
+    {
+      "name": "effect",
+      "file": "effect.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/effect.schema.json",
+      "resource_kind": "Effect"
+    },
+    {
+      "name": "evidence-event",
+      "file": "evidence-event.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/evidence-event.schema.json",
+      "resource_kind": "EvidenceEvent"
+    },
+    {
+      "name": "finding",
+      "file": "finding.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/finding.schema.json",
+      "resource_kind": "Finding"
+    },
+    {
+      "name": "assurance-claim",
+      "file": "assurance-claim.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/assurance-claim.schema.json",
+      "resource_kind": "AssuranceClaim"
+    }
+  ]
+}

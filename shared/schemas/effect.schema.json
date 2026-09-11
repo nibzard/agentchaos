@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/effect.schema.json",
+  "title": "Effect",
+  "description": "A proposed external effect with its bound authorization, dispatch, and receipt (spec 18.1, 10). Append-only lifecycle: PROPOSED to DENIED, or PROPOSED to AUTHORIZED to PREPARED to COMMITTING to COMMITTED, with EXPIRED, CANCELLED, UNKNOWN_EFFECT, and COMPENSATING as exceptional states.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "run_id",
+    "actor",
+    "action_class",
+    "proposed_action",
+    "state",
+    "transitions",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "Effect" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idEffect" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "delegation_id": {
+      "$ref": "common.schema.json#/$defs/idDelegation",
+      "description": "Set when the effect originates from a delegated child actor."
+    },
+    "actor": { "$ref": "common.schema.json#/$defs/idActor" },
+    "action_class": {
+      "type": "string",
+      "enum": ["A0", "A1", "A2"],
+      "description": "A3 is not authorized in beta, so it is not representable on a brokered effect (spec 6.1)."
+    },
+    "proposed_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "resource", "destination", "arguments_digest"],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.]{1,127}$",
+          "description": "Operation name, for example http.request or queue.publish."
+        },
+        "resource": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._:/-]{2,252}$"
+        },
+        "destination": {
+          "type": "string",
+          "pattern": "^(https?://|sink:)[A-Za-z0-9._:/-]{3,252}$"
+        },
+        "arguments_digest": {
+          "$ref": "common.schema.json#/$defs/digest",
+          "description": "Digest of the canonical arguments or content. A changed argument invalidates authorization (spec 10)."
+        },
+        "size_bytes": { "type": "integer", "minimum": 0, "maximum": 5368709120 }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "policy_version",
+        "policy_digest",
+        "expires_at",
+        "nonce"
+      ],
+      "description": "The broker's bound decision (spec 10). Binds tenant, task, actor, resource, destination, and argument digest through the enclosing fields plus these binding fields. Any change invalidates the permit (AC-009). Every permit carries a bounded quantity, a money amount or a byte ceiling; an unbounded permit is not representable.",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^task_[a-z0-9-]{4,64}$"
+        },
+        "policy_version": { "$ref": "common.schema.json#/$defs/semVer" },
+        "policy_digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "resource_version": {
+          "$ref": "common.schema.json#/$defs/digest",
+          "description": "Version of the target resource where the service supports conditional writes (spec 10)."
+        },
+        "amount_limit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["money"],
+          "properties": {
+            "money": { "$ref": "common.schema.json#/$defs/money" },
+            "unit": { "type": "string", "maxLength": 64 }
+          }
+        },
+        "size_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5368709120,
+          "description": "Byte ceiling for the permitted content."
+        },
+        "expires_at": {
+          "$ref": "common.schema.json#/$defs/utcTimestamp",
+          "description": "Short-lived authorization expiry."
+        },
+        "nonce": { "$ref": "common.schema.json#/$defs/nonce" },
+        "authorized_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+      },
+      "anyOf": [
+        { "required": ["amount_limit"] },
+        { "required": ["size_limit"] }
+      ]
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verdict",
+        "reviewer_id",
+        "policy_refs",
+        "event_refs",
+        "rationale",
+        "limitations",
+        "latency_ms"
+      ],
+      "description": "Machine review decision attached to this effect, following the review decision contract (spec 11.2). The governor, not the reviewer, maps the verdict to execution.",
+      "properties": {
+        "verdict": { "$ref": "common.schema.json#/$defs/reviewVerdict" },
+        "reviewer_id": { "$ref": "common.schema.json#/$defs/idActor" },
+        "policy_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^pol_[a-z0-9.:/-]{4,252}$" }
+        },
+        "event_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/idEvidenceEvent" },
+          "description": "Evidence events the reviewer examined. Every decision cites at least one event (AC-014); an evidence-free decision is not representable."
+        },
+        "rationale": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "limitations": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000,
+          "description": "What the review could not establish (spec 11.2)."
+        },
+        "model_id": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Model identity when the reviewer is a model."
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Prompt identifier when the reviewer uses a prompt."
+        },
+        "latency_ms": { "type": "integer", "minimum": 0, "maximum": 600000 }
+      }
+    },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dispatched_at", "outcome"],
+      "description": "External dispatch record. Intent and decision were durably recorded before this point (spec 10.1).",
+      "properties": {
+        "dispatched_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+        "outcome": {
+          "type": "string",
+          "enum": ["acknowledged", "timeout_unknown", "failed"],
+          "description": "A timeout after dispatch is an unknown outcome that requires reconciliation, never a silent retry (spec 10.1, AC-010)."
+        },
+        "idempotency_key": {
+          "$ref": "common.schema.json#/$defs/idempotencyKey",
+          "description": "Used where the service supports idempotency keys (spec 10.1)."
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "received_at", "reconciled"],
+      "description": "External service receipt used to reconcile the true outcome (spec 10.1).",
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]{3,252}$"
+        },
+        "received_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+        "reconciled": {
+          "type": "boolean",
+          "description": "True once the receipt or an external state read resolved the outcome."
+        },
+        "evidence_event_id": { "$ref": "common.schema.json#/$defs/idEvidenceEvent" },
+        "digest": { "$ref": "common.schema.json#/$defs/digest" }
+      }
+    },
+    "compensation_of": {
+      "$ref": "common.schema.json#/$defs/idEffect",
+      "description": "Set on the in-flight compensating effect; the original effect keeps its own state, typically COMMITTED. Compensation is a new authorized effect and may not restore the original state (spec 10.1)."
+    },
+    "state": { "$ref": "common.schema.json#/$defs/effectState" },
+    "transitions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "at"],
+        "properties": {
+          "state": { "$ref": "common.schema.json#/$defs/effectState" },
+          "at": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+          "actor": { "$ref": "common.schema.json#/$defs/idSource" }
+        }
+      },
+      "description": "Append-only lifecycle transitions. The current state is the last entry."
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "AUTHORIZED",
+              "PREPARED",
+              "COMMITTING",
+              "COMMITTED",
+              "EXPIRED",
+              "CANCELLED",
+              "UNKNOWN_EFFECT",
+              "COMPENSATING"
+            ]
+          }
+        },
+        "required": ["state"]
+      },
+      "then": { "required": ["authorization"] },
+      "else": {
+        "not": { "required": ["authorization"] }
+      },
+      "description": "A permit exists only after a decision. A PROPOSED or DENIED effect cannot carry one, because a pre-authorized denial would make a later replay look legitimate (spec 10, AC-009)."
+    },
+    {
+      "if": {
+        "properties": {
+          "state": { "enum": ["COMMITTING", "COMMITTED", "UNKNOWN_EFFECT", "COMPENSATING"] }
+        },
+        "required": ["state"]
+      },
+      "then": { "required": ["dispatch"] }
+    },
+    {
+      "if": {
+        "properties": { "state": { "const": "COMPENSATING" } },
+        "required": ["state"]
+      },
+      "then": { "required": ["compensation_of"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": { "const": "COMMITTED" },
+          "dispatch": {
+            "properties": { "outcome": { "const": "timeout_unknown" } },
+            "required": ["outcome"]
+          }
+        },
+        "required": ["state", "dispatch"]
+      },
+      "then": {
+        "required": ["receipt"],
+        "properties": {
+          "receipt": {
+            "properties": { "reconciled": { "const": true } },
+            "required": ["reconciled"]
+          }
+        }
+      },
+      "description": "A timeout that resolved to COMMITTED needs a reconciled receipt. Otherwise the commit rests on an unknown outcome, which is a silent allow (spec 10.1, AC-010)."
+    }
+  ]
+}

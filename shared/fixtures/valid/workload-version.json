@@ -1,0 +1,42 @@
+{
+  "kind": "WorkloadVersion",
+  "api_version": "v1",
+  "id": "wlv_3f9a1c2d4e5b6071",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "name": "repo-maintainer",
+  "version": "1.2.0",
+  "description": "Headless repository-maintenance agent over a disposable checkout.",
+  "fingerprint": "sha256:134c2b3cd224f1657552d671114d1d4a86180c5a9cf76c1f8e54fdbc8970f4fd",
+  "harness": {
+    "name": "acx-harness",
+    "version": "0.4.1",
+    "digest": "sha256:c94a078591d72beb251768a2bb1260612f788856a818a325f4272d0cd1495715"
+  },
+  "model": {
+    "provider": "acme-models",
+    "model_id": "acme-coder-4",
+    "version": "2026-08-30",
+    "config_digest": "sha256:7d5c7c1368e9dbb945feb135f5e6892163fb5e6b9e92cffea8011c6ec8b2025f"
+  },
+  "tools": [
+    {
+      "name": "shell",
+      "version": "1.0.0",
+      "digest": "sha256:c53a89444e53ccf86071636c87e49b7ecf191b3453b2df21709d7be820d7f62c",
+      "adapter": "brokered-http"
+    },
+    {
+      "name": "http-client",
+      "version": "2.1.0",
+      "digest": "sha256:c53a89444e53ccf86071636c87e49b7ecf191b3453b2df21709d7be820d7f62c",
+      "adapter": "brokered-http"
+    }
+  ],
+  "environment": {
+    "backend": "local_container",
+    "image_digest": "sha256:2246c9d492be236c1bc532282f9b5c3a922fbdc06e25731af51ccaf1e306b06f",
+    "topology_digest": "sha256:2246c9d492be236c1bc532282f9b5c3a922fbdc06e25731af51ccaf1e306b06f"
+  },
+  "supported_modes": ["observe", "replay", "isolated_reexecution"],
+  "created_at": "2026-09-11T18:02:00Z"
+}

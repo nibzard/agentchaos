@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/autonomy-profile.schema.json",
+  "title": "AutonomyProfile",
+  "description": "Immutable published policy and supervision configuration (spec 18.1). Profiles under comparison: hard-controls-only, classifier-assisted, contextual review, full-call review, and session review (spec 15.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "name",
+    "version",
+    "status",
+    "controls",
+    "supervision",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "AutonomyProfile" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idAutonomyProfile" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,62}$",
+      "description": "Profile family name, for example hard-controls-only or contextual-review."
+    },
+    "version": { "$ref": "common.schema.json#/$defs/semVer" },
+    "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "published"],
+      "description": "Published versions are immutable; changes require a new version (spec 18.1)."
+    },
+    "supersedes": {
+      "$ref": "common.schema.json#/$defs/idAutonomyProfile",
+      "description": "Previous profile version this one replaces."
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_action_classes", "destination_policy", "budgets"],
+      "description": "Deterministic hard controls enforced by the broker without an LLM decision (spec 5.3, 11.1).",
+      "properties": {
+        "allowed_action_classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["A0", "A1", "A2"],
+            "description": "A3 is deliberately unrepresentable: irreversible external effects are not authorized in beta (spec 6.1)."
+          }
+        },
+        "destination_policy": {
+          "type": "string",
+          "enum": ["deny_by_default"],
+          "description": "Beta allows only deny-by-default destination policy (spec 13.1)."
+        },
+        "budgets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_effects_per_session",
+            "max_session_cost",
+            "max_tree_cost",
+            "max_tree_tokens"
+          ],
+          "properties": {
+            "max_effects_per_session": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "max_session_cost": { "$ref": "common.schema.json#/$defs/money" },
+            "max_tree_cost": {
+              "$ref": "common.schema.json#/$defs/money",
+              "description": "Tree-wide cumulative money limit shared across delegation children (spec 12, F13)."
+            },
+            "max_tree_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000000000,
+              "description": "Tree-wide cumulative token limit shared across delegation children (spec 12, F13)."
+            }
+          }
+        }
+      }
+    },
+    "supervision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deterministic_gate",
+        "fast_detector",
+        "contextual_reviewer",
+        "session_review",
+        "deep_audit",
+        "retry"
+      ],
+      "description": "Layer configuration for the supervision stack in spec 11.1. The deterministic gate and the nonzero sentinel sample cannot be disabled (spec 11.1, 15.1); the comparison arms from spec 15.3 toggle only the detector and reviewer layers.",
+      "properties": {
+        "deterministic_gate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["applies_to"],
+          "properties": {
+            "applies_to": {
+              "const": "every_external_effect",
+              "description": "The deterministic gate cannot be disabled for external effects (spec 11.1)."
+            }
+          }
+        },
+        "fast_detector": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Fast detector over every supported event (spec 11.1)."
+            }
+          }
+        },
+        "contextual_reviewer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "deadline_ms", "on_timeout", "scope"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "deadline_ms": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 60000,
+              "description": "Decision deadline. Spec 21 proposes a 3-second default."
+            },
+            "on_timeout": {
+              "type": "string",
+              "enum": ["hold", "deny"],
+              "description": "Timeout fallback. A silent allow is not representable (spec 10.2, 21)."
+            },
+            "scope": {
+              "type": "string",
+              "enum": ["risk_routed", "every_call"],
+              "description": "Risk-routed selection or full-call review; both profiles are required comparisons (spec 15.3)."
+            }
+          }
+        },
+        "session_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "max_session_events"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "max_session_events": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "description": "Review budget. Sessions that exceed it are marked incomplete, never clean (spec 11.3)."
+            },
+            "incremental_windows": {
+              "type": "boolean",
+              "description": "Bounded incremental review for long sessions (spec 11.3)."
+            }
+          }
+        },
+        "deep_audit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "uniform_sample_rate", "randomization_key_ref"],
+          "properties": {
+            "enabled": {
+              "const": true,
+              "description": "The nonzero random sentinel sample cannot be disabled (spec 15.1, AC-017); only its rate is configurable."
+            },
+            "uniform_sample_rate": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "description": "Nonzero uniform random sentinel sample over clean traffic (spec 15.1, AC-017)."
+            },
+            "randomization_key_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "Reference to the randomization keys, kept outside worker access (spec 15.1)."
+            }
+          }
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_alternative_plans", "restart_from", "preserve_prior_evidence"],
+          "properties": {
+            "max_alternative_plans": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3,
+              "description": "Bounded alternative-plan generation (spec 11.5)."
+            },
+            "restart_from": {
+              "const": "checkpoint_before_effect",
+              "description": "Alternatives must restart from a checkpoint before the questionable effect (spec 11.5)."
+            },
+            "preserve_prior_evidence": {
+              "const": true,
+              "description": "Prior suspicious evidence is never erased when an alternative looks benign (spec 11.5)."
+            }
+          }
+        }
+      }
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  }
+}

@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/experiment.schema.json",
+  "title": "Experiment",
+  "description": "A compiled experiment definition and its target set (spec 18.1). The manifest is the strict compiler input from spec 9.1 and 13.1. Draft experiments are editable; an executed revision is immutable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "status",
+    "manifest",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "Experiment" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idExperiment" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Manifest revision. The executed revision is frozen and immutable; edits create a new revision."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "compiled",
+        "scheduled",
+        "running",
+        "stopping",
+        "completed",
+        "stopped",
+        "failed"
+      ],
+      "description": "An experiment moves draft to compiled only through the deterministic compiler (spec 9.1)."
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "workload_version_id",
+        "scenario_version_ids",
+        "baseline_profile_id",
+        "treatment_profile_id",
+        "selectors",
+        "budgets",
+        "identities",
+        "recording",
+        "stop_rules",
+        "rollback",
+        "credentials",
+        "effect_sinks"
+      ],
+      "properties": {
+        "mode": {
+          "$ref": "common.schema.json#/$defs/operatingMode",
+          "description": "Requested mode. The compiler rejects modes the workload or scenarios do not support."
+        },
+        "workload_version_id": { "$ref": "common.schema.json#/$defs/idWorkloadVersion" },
+        "scenario_version_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/idScenarioVersion" }
+        },
+        "baseline_profile_id": { "$ref": "common.schema.json#/$defs/idAutonomyProfile" },
+        "treatment_profile_id": { "$ref": "common.schema.json#/$defs/idAutonomyProfile" },
+        "selectors": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "recorded_seed", "exclusions"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["enrolled_targets"],
+                "description": "Selectors must resolve to an explicit enrolled set; wildcard public destinations are not representable (spec 7, 13.1)."
+              },
+              "target_ids": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4096,
+                "uniqueItems": true,
+                "items": { "$ref": "common.schema.json#/$defs/idTarget" },
+                "description": "Explicit enrolled targets. Empty or unenrolled expansions fail closed (AC-002)."
+              },
+              "recorded_seed": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Target-selection seed recorded for auditability (spec 13.1)."
+              },
+              "exclusions": {
+                "type": "array",
+                "maxItems": 4096,
+                "uniqueItems": true,
+                "items": { "$ref": "common.schema.json#/$defs/idTarget" },
+                "description": "Exclusion list recorded with the selection (spec 13.1)."
+              }
+            }
+          }
+        },
+        "budgets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_duration_s",
+            "max_concurrent_sessions",
+            "per_session_cost_max",
+            "aggregate_cost_max"
+          ],
+          "properties": {
+            "max_duration_s": { "type": "integer", "minimum": 1, "maximum": 86400 },
+            "max_concurrent_sessions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64,
+              "description": "Beta default is two concurrent sessions (spec 13.1)."
+            },
+            "per_session_cost_max": { "$ref": "common.schema.json#/$defs/money" },
+            "aggregate_cost_max": { "$ref": "common.schema.json#/$defs/money" }
+          }
+        },
+        "identities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "description": "Identity class the experiment runs under (spec 13.1). Synthetic sessions use dedicated identities with bounded resource limits and stay excluded from ordinary customer outcome statistics (spec 13.4).",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["synthetic_dedicated", "enrolled_opt_in"],
+              "description": "synthetic_dedicated for synthetic identities; enrolled_opt_in for explicitly enrolled real identities, which the customer_canary mode requires."
+            },
+            "max_sessions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "Bounded count of concurrent or total synthetic identities for this experiment (spec 13.4)."
+            }
+          }
+        },
+        "recording": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required_event_kinds", "mandatory", "retention_days"],
+          "properties": {
+            "required_event_kinds": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": { "$ref": "common.schema.json#/$defs/evidenceKind" },
+              "description": "Evidence kinds the run must capture. Capture failure fences effects (spec 10.2)."
+            },
+            "mandatory": {
+              "const": true,
+              "description": "Required recording cannot be turned off in a manifest."
+            },
+            "retention_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650,
+              "description": "Retention window for raw payloads. Proposed default is seven days (spec 19)."
+            }
+          }
+        },
+        "stop_rules": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["condition", "action"],
+            "properties": {
+              "condition": {
+                "type": "string",
+                "enum": [
+                  "unauthorized_effect",
+                  "containment_coverage_loss",
+                  "evidence_persistence_failure",
+                  "unexpected_target_expansion",
+                  "grant_expiry",
+                  "budget_exhaustion",
+                  "service_health_threshold",
+                  "operator_request"
+                ],
+                "description": "Governor trip conditions from spec 13.2."
+              },
+              "action": {
+                "type": "string",
+                "enum": ["stop_injection", "fence_effects", "terminate"],
+                "description": "Injection stop and effect fencing are separate operations (spec 13.2)."
+              },
+              "threshold": {
+                "type": "number",
+                "description": "Numeric threshold for threshold-type conditions, for example a service-health ratio."
+              }
+            }
+          }
+        },
+        "rollback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy"],
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": ["none", "preapproved_compensation"],
+              "description": "Unsupported rollback claims are compiler failures, not warnings (spec 9.1)."
+            },
+            "compensation_effect_ids": {
+              "type": "array",
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+              "description": "Preapproved compensation operations. A compensation is a new authorized effect, not an undo (spec 10.1)."
+            }
+          }
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required_kinds", "freshness_max_age_s"],
+          "properties": {
+            "required_kinds": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+              "description": "Scoped service identity kinds the experiment needs."
+            },
+            "freshness_max_age_s": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 86400,
+              "description": "Stale credentials are compiler failures (spec 9.1)."
+            }
+          }
+        },
+        "effect_sinks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "destination"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["synthetic", "enrolled_service"],
+                "description": "Beta defaults to synthetic sinks with zero real external writes (spec 13.1)."
+              },
+              "destination": {
+                "type": "string",
+                "pattern": "^(https?://|sink:)[A-Za-z0-9._:/-]{3,252}$",
+                "description": "Declared effect sink destination. Missing sinks are compiler failures (spec 9.1)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_digest",
+        "artifact_digests",
+        "risk_classification",
+        "signed_grant"
+      ],
+      "description": "Compiler output. Present for every status beyond draft (spec 9.1).",
+      "properties": {
+        "plan_digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "artifact_digests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "digest"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^[A-Za-z0-9._/-]{1,512}$" },
+              "digest": { "$ref": "common.schema.json#/$defs/digest" }
+            }
+          }
+        },
+        "risk_classification": {
+          "type": "string",
+          "enum": ["low", "moderate", "high"],
+          "description": "Compiler risk classification. An unacceptable classification is rejected before execution (spec 9.1, G6)."
+        },
+        "signed_grant": {
+          "$ref": "common.schema.json#/$defs/signature",
+          "description": "Short-lived signed experiment grant consumed by the execution plane (spec 8)."
+        }
+      }
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "compiled",
+              "scheduled",
+              "running",
+              "stopping",
+              "completed",
+              "stopped",
+              "failed"
+            ]
+          }
+        },
+        "required": ["status"]
+      },
+      "then": { "required": ["plan"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "manifest": {
+            "properties": { "mode": { "const": "production_synthetic" } },
+            "required": ["mode"]
+          }
+        },
+        "required": ["manifest"]
+      },
+      "then": {
+        "properties": {
+          "manifest": {
+            "properties": {
+              "identities": {
+                "properties": { "kind": { "const": "synthetic_dedicated" } },
+                "required": ["kind"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "manifest": {
+            "properties": { "mode": { "const": "customer_canary" } },
+            "required": ["mode"]
+          }
+        },
+        "required": ["manifest"]
+      },
+      "then": {
+        "properties": {
+          "manifest": {
+            "properties": {
+              "identities": {
+                "properties": { "kind": { "const": "enrolled_opt_in" } },
+                "required": ["kind"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

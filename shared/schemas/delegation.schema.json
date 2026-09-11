@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/delegation.schema.json",
+  "title": "Delegation",
+  "description": "Parent-to-child capability delegation (spec 18.1, 10). Children can only narrow capabilities and share the parent's cumulative budget. Attenuation or revocation only; widening is not representable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "run_id",
+    "parent_actor",
+    "child_actor",
+    "depth",
+    "capabilities",
+    "cumulative_budget",
+    "state",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "Delegation" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idDelegation" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "parent_actor": { "$ref": "common.schema.json#/$defs/idActor" },
+    "child_actor": { "$ref": "common.schema.json#/$defs/idActor" },
+    "parent_delegation_id": {
+      "$ref": "common.schema.json#/$defs/idDelegation",
+      "description": "Set when the parent is itself a child; supports tree-wide budget enforcement (spec F13)."
+    },
+    "depth": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 8,
+      "description": "Delegation tree depth. Excessive delegation and recursion are bounded (spec F13)."
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_action_classes", "allowed_destinations", "allowed_resources"],
+      "description": "Capability set narrowed from the parent. Subset enforcement is governor logic (task T008); the contract fixes the fields.",
+      "properties": {
+        "allowed_action_classes": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["A0", "A1", "A2"]
+          }
+        },
+        "allowed_destinations": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^(https?://|sink:)[A-Za-z0-9._:/-]{3,252}$" }
+        },
+        "allowed_resources": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9._:/-]{2,252}$" }
+        }
+      }
+    },
+    "cumulative_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_total_cost", "max_total_tokens", "max_effects"],
+      "description": "The delegation group shares the parent's cumulative budget; a child cannot raise it (spec 10, AC-008). Tree-wide token and effect budgets come from spec 12, F13.",
+      "properties": {
+        "max_total_cost": { "$ref": "common.schema.json#/$defs/money" },
+        "max_total_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000000
+        },
+        "max_effects": { "type": "integer", "minimum": 0, "maximum": 100000 }
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": ["active", "revoked"],
+      "description": "Delegations attenuate or revoke; they never widen (spec 18.1). Grant expiry is an experiment-grant property, not a delegation state (spec 13.2)."
+    },
+    "revoked_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "state": { "const": "revoked" } },
+        "required": ["state"]
+      },
+      "then": { "required": ["revoked_at"] }
+    }
+  ]
+}

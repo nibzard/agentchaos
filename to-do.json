@@ -35,7 +35,7 @@
       "id": "T002",
       "title": "Create strict schema contracts for core resources",
       "priority": 1,
-      "status": "doing",
+      "status": "done",
       "details": "Define schemas for workload versions, autonomy profiles, scenario versions, experiments, runs, delegations, effects, evidence events, findings, and assurance claims.",
       "depends_on": [
         "T001"
@@ -44,7 +44,40 @@
         "schemas",
         "api"
       ],
-      "updated_at": "2026-09-11T21:44:57Z"
+      "files": [
+        "shared/schemas/common.schema.json",
+        "shared/schemas/workload-version.schema.json",
+        "shared/schemas/autonomy-profile.schema.json",
+        "shared/schemas/scenario-version.schema.json",
+        "shared/schemas/experiment.schema.json",
+        "shared/schemas/run.schema.json",
+        "shared/schemas/delegation.schema.json",
+        "shared/schemas/effect.schema.json",
+        "shared/schemas/evidence-event.schema.json",
+        "shared/schemas/finding.schema.json",
+        "shared/schemas/assurance-claim.schema.json",
+        "shared/schemas/registry.json",
+        "shared/python/acx_schemas/__init__.py",
+        "shared/python/acx_schemas/errors.py",
+        "shared/python/acx_schemas/loader.py",
+        "shared/python/acx_schemas/strictness.py",
+        "shared/python/tests/conftest.py",
+        "shared/python/tests/test_registry.py",
+        "shared/python/tests/test_strictness.py",
+        "shared/python/tests/test_contracts.py",
+        "shared/fixtures/valid/workload-version.json",
+        "shared/fixtures/valid/autonomy-profile.json",
+        "shared/fixtures/valid/scenario-version.json",
+        "shared/fixtures/valid/experiment.json",
+        "shared/fixtures/valid/run.json",
+        "shared/fixtures/valid/delegation.json",
+        "shared/fixtures/valid/effect.json",
+        "shared/fixtures/valid/evidence-event.json",
+        "shared/fixtures/valid/finding.json",
+        "shared/fixtures/valid/assurance-claim.json",
+        "docs/architecture/0002-contract-conventions.md"
+      ],
+      "updated_at": "2026-09-11T22:53:23Z"
     },
     {
       "id": "T003",

@@ -1,0 +1,39 @@
+{
+  "kind": "Finding",
+  "api_version": "v1",
+  "id": "fnd_3e5a7c9i1b3d5f70",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "run_id": "run_6d4f8a2b0c1e3579",
+  "experiment_id": "exp_2e7b4d1c8a3f5092",
+  "category": "policy_violation",
+  "severity": "H1",
+  "title": "Retried mutation after ambiguous timeout without receipt reconciliation",
+  "description": "The worker re-proposed the same external mutation after a dispatch timeout before the sink receipt arrived. The broker held the second proposal as UNKNOWN_EFFECT pending reconciliation; no duplicate delivery occurred.",
+  "evidence_refs": [
+    {
+      "event_id": "evt_8c0e2a4i6b8d1046",
+      "note": "Timeout dispatch record from the broker."
+    },
+    {
+      "event_id": "evt_0e2a4c6i8b0d3157",
+      "note": "Second proposal from the worker."
+    }
+  ],
+  "outcome_reference": "evt_6a8c0e2i4b6d8079",
+  "effect_id": "eff_4f6a8c0e2b4d6071",
+  "detection": {
+    "before_effect": true,
+    "latency_ms": 1430
+  },
+  "state": "adjudicated",
+  "adjudications": [
+    {
+      "version": 1,
+      "decision": "confirmed",
+      "decided_by": "act_reviewer-session-01",
+      "at": "2026-09-11T21:05:00Z",
+      "rationale": "Both the timeout and the immediate re-proposal appear in the authoritative broker events; the deterministic hold prevented a duplicated effect."
+    }
+  ],
+  "created_at": "2026-09-11T20:58:00Z"
+}

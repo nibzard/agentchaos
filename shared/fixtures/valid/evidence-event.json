@@ -1,0 +1,43 @@
+{
+  "kind": "EvidenceEvent",
+  "api_version": "v1",
+  "id": "evt_6a8c0e2i4b6d8079",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "run_id": "run_6d4f8a2b0c1e3579",
+  "experiment_id": "exp_2e7b4d1c8a3f5092",
+  "event_kind": "external_receipt",
+  "trust_label": "collector_fact",
+  "source": {
+    "id": "src_collector-sink-01",
+    "component": "collector",
+    "coverage": "observed"
+  },
+  "sequence": 4127,
+  "correlation_ids": ["cid_eff_0b2d4f6a8c1e3057"],
+  "parent_event_ids": ["evt_2c4e6a8i0b1d3f57"],
+  "effect_id": "eff_0b2d4f6a8c1e3057",
+  "observed_at": "2026-09-11T20:43:06.128Z",
+  "clock_uncertainty_ms": 12,
+  "payload": {
+    "kind": "object_ref",
+    "storage_ref": "obj://evidence-beta/run_6d4f8a2b0c1e3579/evt_6a8c0e2i4b6d8079.bin",
+    "digest": "sha256:0ec08a16b6067ad62ab84b7694c61053c1e8c6649f8754bb7cfbdfee6d0f94e4",
+    "size_bytes": 946,
+    "content_type": "application/json",
+    "redacted": false,
+    "truncated": false,
+    "tombstone": false
+  },
+  "checkpoint": {
+    "sequence_from": 4096,
+    "sequence_to": 4127,
+    "previous_checkpoint_digest": "sha256:b4259e3870659fba696d669d356f415280becb72df47a7c01374505a0dcaa345",
+    "digest": "sha256:5a6d444766570c7139a1972f1bfaa0c82cce867f02ebf84b60ff11738f0e8191",
+    "signature": {
+      "algorithm": "ed25519",
+      "key_id": "key_collector-sink-01",
+      "value": "aG9zdGlsZS1wYXlsb2FkLWRpZ2VzdC1wbGFjZWhvbGRlci12YWx1ZS0xMjM0NTY3ODk="
+    }
+  },
+  "ingested_at": "2026-09-11T20:43:07.001Z"
+}

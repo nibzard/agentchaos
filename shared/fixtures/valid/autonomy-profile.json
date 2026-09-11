@@ -1,0 +1,51 @@
+{
+  "kind": "AutonomyProfile",
+  "api_version": "v1",
+  "id": "aup_5b8d2e0f1a3c4966",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "name": "contextual-review",
+  "version": "0.7.0",
+  "description": "Deterministic gates plus risk-routed contextual machine review and session review.",
+  "status": "published",
+  "supersedes": "aup_1a2b3c4d5e6f7081",
+  "controls": {
+    "allowed_action_classes": ["A0", "A1", "A2"],
+    "destination_policy": "deny_by_default",
+    "budgets": {
+      "max_effects_per_session": 200,
+      "max_session_cost": { "currency": "USD", "micros": 5000000 },
+      "max_tree_cost": { "currency": "USD", "micros": 15000000 },
+      "max_tree_tokens": 8000000
+    }
+  },
+  "supervision": {
+    "deterministic_gate": {
+      "applies_to": "every_external_effect"
+    },
+    "fast_detector": {
+      "enabled": true
+    },
+    "contextual_reviewer": {
+      "enabled": true,
+      "deadline_ms": 3000,
+      "on_timeout": "hold",
+      "scope": "risk_routed"
+    },
+    "session_review": {
+      "enabled": true,
+      "max_session_events": 200000,
+      "incremental_windows": true
+    },
+    "deep_audit": {
+      "enabled": true,
+      "uniform_sample_rate": 0.01,
+      "randomization_key_ref": "kms://tenant-keys/audit-randomization"
+    },
+    "retry": {
+      "max_alternative_plans": 1,
+      "restart_from": "checkpoint_before_effect",
+      "preserve_prior_evidence": true
+    }
+  },
+  "created_at": "2026-09-10T09:15:00Z"
+}

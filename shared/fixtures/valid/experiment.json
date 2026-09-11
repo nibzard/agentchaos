@@ -1,0 +1,92 @@
+{
+  "kind": "Experiment",
+  "api_version": "v1",
+  "id": "exp_2e7b4d1c8a3f5092",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "revision": 1,
+  "status": "compiled",
+  "manifest": {
+    "mode": "isolated_reexecution",
+    "workload_version_id": "wlv_3f9a1c2d4e5b6071",
+    "scenario_version_ids": ["scn_7c1e9a0b3d5f2468"],
+    "baseline_profile_id": "aup_1a2b3c4d5e6f7081",
+    "treatment_profile_id": "aup_5b8d2e0f1a3c4966",
+    "selectors": [
+      {
+        "kind": "enrolled_targets",
+        "target_ids": ["tgt_4a5b6c7d8e9f0a1b"],
+        "recorded_seed": 20260911,
+        "exclusions": ["tgt_0f1e2d3c4b5a6978"]
+      }
+    ],
+    "budgets": {
+      "max_duration_s": 1800,
+      "max_concurrent_sessions": 2,
+      "per_session_cost_max": { "currency": "USD", "micros": 3000000 },
+      "aggregate_cost_max": { "currency": "USD", "micros": 12000000 }
+    },
+    "identities": {
+      "kind": "synthetic_dedicated",
+      "max_sessions": 1000
+    },
+    "recording": {
+      "required_event_kinds": [
+        "proposed_action",
+        "broker_decision",
+        "external_receipt",
+        "injection_receipt",
+        "collector_heartbeat"
+      ],
+      "mandatory": true,
+      "retention_days": 7
+    },
+    "stop_rules": [
+      {
+        "condition": "unauthorized_effect",
+        "action": "fence_effects"
+      },
+      {
+        "condition": "budget_exhaustion",
+        "action": "terminate"
+      },
+      {
+        "condition": "service_health_threshold",
+        "action": "stop_injection",
+        "threshold": 0.95
+      }
+    ],
+    "rollback": {
+      "strategy": "none"
+    },
+    "credentials": {
+      "required_kinds": ["fixture-github-token", "model-gateway"],
+      "freshness_max_age_s": 3600
+    },
+    "effect_sinks": [
+      {
+        "kind": "synthetic",
+        "destination": "sink://patch-export-beta"
+      }
+    ]
+  },
+  "plan": {
+    "plan_digest": "sha256:cb95747257028717191a8768fa00eba7f24f351b239531a623c6e6e2b3d7b5db",
+    "artifact_digests": [
+      {
+        "path": "scenarios/F01-101-1.1.0.signed.json",
+        "digest": "sha256:1789c23fcd038683e5d4553eb2f993802a4f92634ebc20a2ffd70e2f820b9d99"
+      },
+      {
+        "path": "workloads/repo-maintainer-1.2.0.json",
+        "digest": "sha256:134c2b3cd224f1657552d671114d1d4a86180c5a9cf76c1f8e54fdbc8970f4fd"
+      }
+    ],
+    "risk_classification": "moderate",
+    "signed_grant": {
+      "algorithm": "ed25519",
+      "key_id": "key_grants-2026q3",
+      "value": "qR2wL5nH8xZ0pT3vB6cY1dE4gJ7kM0oP5sU8hA2fD9iK4mN7bQ1eR4tW6yX0cV3zB6gH9jK2"
+    }
+  },
+  "created_at": "2026-09-11T20:10:00Z"
+}

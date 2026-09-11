@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/evidence-event.schema.json",
+  "title": "EvidenceEvent",
+  "description": "Source-authenticated observation in the authoritative evidence store (spec 18.1, 9.4). Immutable; corrections link to originals. Worker claims, collector facts, and monitor interpretations stay distinguishable through trust labels (AC-012).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "run_id",
+    "event_kind",
+    "trust_label",
+    "source",
+    "sequence",
+    "observed_at",
+    "clock_uncertainty_ms",
+    "payload"
+  ],
+  "properties": {
+    "kind": { "const": "EvidenceEvent" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idEvidenceEvent" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "experiment_id": { "$ref": "common.schema.json#/$defs/idExperiment" },
+    "event_kind": { "$ref": "common.schema.json#/$defs/evidenceKind" },
+    "trust_label": {
+      "allOf": [{ "$ref": "common.schema.json#/$defs/trustLabel" }],
+      "description": "Worker-generated events are lower-trust evidence (spec 9.4)."
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "component"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/idSource" },
+        "component": {
+          "type": "string",
+          "enum": [
+            "collector",
+            "broker",
+            "governor",
+            "adapter",
+            "monitor",
+            "worker",
+            "verifier"
+          ],
+          "description": "Originating component. Collectors use identities independent of the worker (spec 9.4)."
+        },
+        "coverage": {
+          "type": "string",
+          "enum": ["observed", "contained"],
+          "description": "Whether the collector observed the behavior directly or through the contained environment boundary. Collector coverage feeds the containment_coverage_loss trip condition (spec 13.2)."
+        }
+      }
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Per-source monotonically increasing sequence number. No global total order is assumed (spec 9.4)."
+    },
+    "correlation_ids": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^cid_[A-Za-z0-9_-]{4,128}$" },
+      "description": "Correlation identifiers that join events across sources (spec 9.4)."
+    },
+    "parent_event_ids": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/idEvidenceEvent" },
+      "description": "Parent edges forming the event graph (spec 9.4)."
+    },
+    "effect_id": { "$ref": "common.schema.json#/$defs/idEffect" },
+    "delegation_id": { "$ref": "common.schema.json#/$defs/idDelegation" },
+    "finding_id": { "$ref": "common.schema.json#/$defs/idFinding" },
+    "observed_at": {
+      "$ref": "common.schema.json#/$defs/utcTimestamp"
+    },
+    "clock_uncertainty_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3600000,
+      "description": "Recorded clock uncertainty. Inconsistent clocks become findings (spec 9.4)."
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "redacted", "truncated"],
+      "description": "Payload reference. Raw content is minimized and redacted before it leaves the execution plane (spec 19). Summaries are derivative views; raw references are authoritative (spec 9.4).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["metadata_only", "object_ref", "inline"],
+          "description": "Metadata-only events carry no captured content. inline is for small safe payloads such as receipts; raw prompts and tool results use object_ref."
+        },
+        "storage_ref": {
+          "type": "string",
+          "pattern": "^obj://[a-z0-9][a-z0-9._/-]{3,508}$",
+          "description": "Object-storage reference for the raw payload."
+        },
+        "digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "size_bytes": { "type": "integer", "minimum": 0, "maximum": 5368709120 },
+        "content_type": { "type": "string", "pattern": "^[A-Za-z0-9./+-]{3,127}$" },
+        "redacted": {
+          "type": "boolean",
+          "description": "True when capture was minimized or redacted before storage (spec 19)."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when the captured content was truncated (spec 11.3)."
+        },
+        "tombstone": {
+          "type": "boolean",
+          "description": "True when the referenced payload was deleted after its retention window. A legal hold governs availability; it never causes deletion (spec 19)."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "Inline content for small safe payloads such as receipts. Raw prompts and tool results stay in object storage."
+        }
+      }
+    },
+    "corrects_event_id": {
+      "$ref": "common.schema.json#/$defs/idEvidenceEvent",
+      "description": "Set on correction events that supersede an earlier event; originals stay immutable (spec 18.1)."
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence_from", "sequence_to", "digest", "signature"],
+      "description": "Signed per-source checkpoint covering a contiguous sequence range (spec 9.4).",
+      "properties": {
+        "sequence_from": { "type": "integer", "minimum": 0 },
+        "sequence_to": { "type": "integer", "minimum": 0 },
+        "previous_checkpoint_digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "signature": { "$ref": "common.schema.json#/$defs/signature" }
+      }
+    },
+    "ingested_at": {
+      "$ref": "common.schema.json#/$defs/utcTimestamp",
+      "description": "Set by the evidence plane on ingest. At-least-once delivery deduplicates by event id (spec 18.3)."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "payload": { "properties": { "kind": { "const": "object_ref" } }, "required": ["kind"] } },
+        "required": ["payload"]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "required": ["storage_ref", "digest", "size_bytes", "content_type"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "payload": { "properties": { "kind": { "const": "metadata_only" } }, "required": ["kind"] } },
+        "required": ["payload"]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "not": {
+              "anyOf": [
+                { "required": ["storage_ref"] },
+                { "required": ["digest"] },
+                { "required": ["size_bytes"] },
+                { "required": ["content_type"] },
+                { "required": ["content"] }
+              ]
+            }
+          }
+        }
+      },
+      "description": "A metadata-only event carries no captured content. Leaking a storage reference or inline body into it would misstate what was captured (spec 9.4)."
+    },
+    {
+      "if": {
+        "properties": { "payload": { "properties": { "kind": { "const": "inline" } }, "required": ["kind"] } },
+        "required": ["payload"]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "required": ["content"],
+            "not": { "required": ["storage_ref"] }
+          }
+        }
+      },
+      "description": "An inline payload carries its content in the event itself; a parallel storage reference would create two competing authorities for one payload."
+    },
+    {
+      "if": {
+        "properties": { "payload": { "properties": { "tombstone": { "const": true } }, "required": ["tombstone"] } },
+        "required": ["payload"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "properties": { "kind": { "const": "object_ref" } } }
+        }
+      },
+      "description": "Only a stored object can be tombstoned. Metadata-only and inline events have nothing to delete under retention (spec 19)."
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "properties": { "component": { "const": "collector" } },
+            "required": ["component"]
+          }
+        },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "source": { "required": ["coverage"] }
+        }
+      },
+      "description": "Collector events declare coverage, so the containment_coverage_loss trip condition has explicit data rather than silence (spec 13.2)."
+    }
+  ]
+}

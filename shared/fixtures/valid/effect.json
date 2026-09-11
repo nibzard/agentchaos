@@ -1,0 +1,81 @@
+{
+  "kind": "Effect",
+  "api_version": "v1",
+  "id": "eff_0b2d4f6a8c1e3057",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "run_id": "run_6d4f8a2b0c1e3579",
+  "delegation_id": "dlg_9a3c5e7i1b2d4f60",
+  "actor": "act_subagent-91xz4",
+  "action_class": "A2",
+  "proposed_action": {
+    "operation": "http.request",
+    "resource": "sink://patch-export-beta",
+    "destination": "https://sink.internal.beta/export/patch",
+    "arguments_digest": "sha256:f94e6dc4034d05f0550a2f846c46c59004ec527914ba2c199d9a12474416231d",
+    "size_bytes": 18342
+  },
+  "authorization": {
+    "task_id": "task_fix-issue-4021",
+    "policy_version": "1.4.0",
+    "policy_digest": "sha256:d1f726983dba42fdc3e90ddc707c8f8b589f281d4ccfbffa7e9190a59dfe0028",
+    "resource_version": "sha256:0ec08a16b6067ad62ab84b7694c61053c1e8c6649f8754bb7cfbdfee6d0f94e4",
+    "amount_limit": {
+      "money": { "currency": "USD", "micros": 1000 }
+    },
+    "expires_at": "2026-09-11T20:43:10Z",
+    "nonce": "n9Xk2LpQ7RsT4vW8yB3cD6fH0jM5aZ1E",
+    "authorized_at": "2026-09-11T20:43:00Z"
+  },
+  "review": {
+    "verdict": "ALLOW",
+    "reviewer_id": "act_reviewer-ctx-02",
+    "policy_refs": ["pol_v1/effects/export/patch"],
+    "event_refs": ["evt_2c4e6a8i0b1d3f57", "evt_4e6a8c1e3b5d7069"],
+    "rationale": "The patch export destination matches the task-bound allowlist entry and the argument digest matches the verified diff.",
+    "limitations": "The reviewer did not re-run the tests and relied on the harness test receipt for patch correctness.",
+    "model_id": "acme-reviewer-2",
+    "prompt_version": "ctx-reviewer-0.6",
+    "latency_ms": 2210
+  },
+  "dispatch": {
+    "dispatched_at": "2026-09-11T20:43:05Z",
+    "outcome": "acknowledged",
+    "idempotency_key": "idk_eff_0b2d4f6a8c1e3057_r1"
+  },
+  "receipt": {
+    "source": "sink.internal.beta",
+    "received_at": "2026-09-11T20:43:06Z",
+    "reconciled": true,
+    "evidence_event_id": "evt_6a8c0e2i4b6d8079",
+    "digest": "sha256:0ec08a16b6067ad62ab84b7694c61053c1e8c6649f8754bb7cfbdfee6d0f94e4"
+  },
+  "state": "COMMITTED",
+  "transitions": [
+    {
+      "state": "PROPOSED",
+      "at": "2026-09-11T20:42:58Z",
+      "actor": "src_broker-1"
+    },
+    {
+      "state": "AUTHORIZED",
+      "at": "2026-09-11T20:43:00Z",
+      "actor": "src_broker-1"
+    },
+    {
+      "state": "PREPARED",
+      "at": "2026-09-11T20:43:04Z",
+      "actor": "src_broker-1"
+    },
+    {
+      "state": "COMMITTING",
+      "at": "2026-09-11T20:43:05Z",
+      "actor": "src_broker-1"
+    },
+    {
+      "state": "COMMITTED",
+      "at": "2026-09-11T20:43:06Z",
+      "actor": "src_broker-1"
+    }
+  ],
+  "created_at": "2026-09-11T20:42:58Z"
+}

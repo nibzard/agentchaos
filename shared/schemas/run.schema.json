@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/run.schema.json",
+  "title": "Run",
+  "description": "One execution attempt of an experiment variant with its environment, profiles, injections, and results (spec 18.1, 9.2). State transitions are append-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "experiment_id",
+    "variant",
+    "autonomy_profile_id",
+    "workload_version_id",
+    "state",
+    "environment",
+    "randomization",
+    "injections",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "Run" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "experiment_id": { "$ref": "common.schema.json#/$defs/idExperiment" },
+    "variant": {
+      "type": "string",
+      "enum": ["baseline", "treatment"],
+      "description": "Baseline and treatment variants run in fresh independent environments (spec 9.2, AC-003)."
+    },
+    "autonomy_profile_id": { "$ref": "common.schema.json#/$defs/idAutonomyProfile" },
+    "workload_version_id": { "$ref": "common.schema.json#/$defs/idWorkloadVersion" },
+    "state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "provisioning",
+        "running",
+        "stopping",
+        "terminal"
+      ],
+      "description": "Run lifecycle. Terminal runs carry an outcome and a cleanup terminal state."
+    },
+    "runtime_state": {
+      "$ref": "common.schema.json#/$defs/runtimeState",
+      "description": "Current worker autonomy state from spec 6.2 (NORMAL through TERMINATED). Optional because it applies only to runs that execute a worker; its transitions are recorded as evidence events."
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "instance_id", "fresh"],
+      "properties": {
+        "backend": { "$ref": "common.schema.json#/$defs/sandboxBackend" },
+        "instance_id": {
+          "type": "string",
+          "pattern": "^env_[a-z0-9-]{4,64}$"
+        },
+        "fresh": {
+          "const": true,
+          "description": "Every run uses a fresh disposable environment; reuse is not representable (spec 9.2)."
+        },
+        "image_digest": { "$ref": "common.schema.json#/$defs/digest" }
+      }
+    },
+    "randomization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_selection_seed"],
+      "description": "Random seeds and provider metadata recorded for reproducibility. Exact model reruns are not promised (spec 9.2).",
+      "properties": {
+        "target_selection_seed": { "type": "integer", "minimum": 0 },
+        "model_seed": { "type": "string", "maxLength": 256 },
+        "prompt_digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "tool_versions_digest": { "$ref": "common.schema.json#/$defs/digest" },
+        "provider_metadata_digest": { "$ref": "common.schema.json#/$defs/digest" }
+      }
+    },
+    "injections": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scenario_version_id", "trigger_state"],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "trigger_state": { "enum": ["triggered", "not_triggered"] }
+              },
+              "required": ["trigger_state"]
+            },
+            "then": { "required": ["receipt_event_id"] }
+          }
+        ],
+        "properties": {
+          "scenario_version_id": { "$ref": "common.schema.json#/$defs/idScenarioVersion" },
+          "trigger_state": {
+            "type": "string",
+            "enum": ["triggered", "not_triggered", "unknown"],
+            "description": "Every selected injection has trigger or nontrigger evidence (AC-004)."
+          },
+          "receipt_event_id": {
+            "$ref": "common.schema.json#/$defs/idEvidenceEvent",
+            "description": "Required whenever trigger_state is determined: every adapter emits an injection receipt from outside the worker (spec 9.3) and every determined verdict needs linked evidence (AC-004). May be absent only while trigger_state is unknown; missing receipts there become findings."
+          },
+          "variant_id": {
+            "type": "string",
+            "pattern": "^var_[a-z0-9-]{1,32}$"
+          }
+        }
+      }
+    },
+    "outcome": {
+      "$ref": "common.schema.json#/$defs/runOutcome",
+      "description": "Required once state is terminal. Unknown and untriggered cases never count as passes (spec 9.2, AC-018)."
+    },
+    "terminal_state": {
+      "$ref": "common.schema.json#/$defs/terminalState",
+      "description": "Independent cleanup verification result. Never inferred from worker exit (spec 13.3, AC-022)."
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worker", "retry", "monitoring", "storage"],
+      "description": "Per-run cost accounting (spec 16, AC-026). Per-run categories are worker, retry, monitoring, and storage; the experiment and review categories named by AC-026 are reported at workload and control-profile level (task T025).",
+      "properties": {
+        "worker": { "$ref": "common.schema.json#/$defs/money" },
+        "retry": { "$ref": "common.schema.json#/$defs/money" },
+        "monitoring": { "$ref": "common.schema.json#/$defs/money" },
+        "storage": { "$ref": "common.schema.json#/$defs/money" }
+      }
+    },
+    "stopped_reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "description": "Stop-rule condition that ended this run early (spec 13.2)."
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+    "finished_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "state": { "const": "terminal" } },
+        "required": ["state"]
+      },
+      "then": {
+        "required": ["outcome", "terminal_state", "finished_at"]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["outcome"] },
+            { "required": ["terminal_state"] },
+            { "required": ["finished_at"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": { "const": "terminal" },
+          "outcome": { "const": "PASS" },
+          "injections": { "minItems": 1 }
+        },
+        "required": ["state", "outcome"]
+      },
+      "then": {
+        "properties": {
+          "injections": {
+            "contains": {
+              "properties": { "trigger_state": { "const": "triggered" } },
+              "required": ["trigger_state"]
+            }
+          }
+        }
+      },
+      "description": "Never count an untriggered attack as a successful defense (spec 14.2, AC-018): a PASS over selected injections requires at least one triggered injection."
+    },
+    {
+      "if": {
+        "properties": {
+          "state": { "const": "terminal" },
+          "outcome": { "const": "NOT_TRIGGERED" }
+        },
+        "required": ["state", "outcome"]
+      },
+      "then": {
+        "not": {
+          "properties": {
+            "injections": {
+              "contains": {
+                "properties": { "trigger_state": { "const": "triggered" } },
+                "required": ["trigger_state"]
+              }
+            }
+          },
+          "required": ["injections"]
+        }
+      },
+      "description": "NOT_TRIGGERED must contradict no trigger evidence (spec 9.2, 14.2)."
+    }
+  ]
+}

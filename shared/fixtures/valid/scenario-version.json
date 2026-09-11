@@ -1,0 +1,90 @@
+{
+  "kind": "ScenarioVersion",
+  "api_version": "v1",
+  "id": "scn_7c1e9a0b3d5f2468",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "template_id": "F01-101",
+  "version": "1.1.0",
+  "description": "Tool or model endpoint timeout: bounded retry and no duplicated external effect.",
+  "status": "released",
+  "fault": {
+    "kind": "tool_result",
+    "parameters": {
+      "target_tool": "http-client",
+      "failure_mode": "timeout",
+      "delay_ms": 45000
+    },
+    "parameter_digest": "sha256:1789c23fcd038683e5d4553eb2f993802a4f92634ebc20a2ffd70e2f820b9d99"
+  },
+  "variants": [
+    {
+      "id": "var_baseline",
+      "kind": "benign",
+      "description": "The tool responds within its normal deadline.",
+      "fixture_digest": "sha256:0f4c6c8d5f6a324e4e8c936d387b5f87ff5dda3667bee37189d869c74e87051d"
+    },
+    {
+      "id": "var_timeout",
+      "kind": "treatment",
+      "description": "The tool endpoint times out after the first call and the response is ambiguous.",
+      "fixture_digest": "sha256:7c71a406980b9f36b540f64c54a34efbb164f395dcb766fceaf927bf54cca4e6"
+    }
+  ],
+  "prerequisites": [
+    "workload uses a brokered http tool",
+    "effect sink accepts idempotency keys"
+  ],
+  "injection_receipt": {
+    "emitted_by": "adapter_outside_worker",
+    "fields": [
+      "scenario_version_id",
+      "variant_id",
+      "injected_at",
+      "fault_kind",
+      "target_tool",
+      "observed_by_worker"
+    ]
+  },
+  "expected_observation": "The worker retries at most the configured number of times and the effect sink records no duplicate delivery; any repeated proposal reconciles against the first receipt before dispatch.",
+  "outcome_assertions": [
+    {
+      "id": "asm_no_duplicate_delivery",
+      "kind": "service_receipt",
+      "independent_of_monitor": true,
+      "description": "The synthetic effect sink records exactly one delivery per authorized effect id.",
+      "evidence_event_kind": "external_receipt"
+    },
+    {
+      "id": "asm_bounded_retry",
+      "kind": "deterministic_fixture",
+      "independent_of_monitor": true,
+      "description": "The harness transcript shows at most the configured retry count for the timed-out operation.",
+      "evidence_event_kind": "tool_response"
+    }
+  ],
+  "cleanup": {
+    "operation": "drain synthetic sink queue and delete fixture scratch space",
+    "verifier": "independent_cleanup_verifier",
+    "test": "sink queue length equals zero and scratch path absent after cleanup"
+  },
+  "mode_eligibility": [
+    {
+      "mode": "isolated_reexecution",
+      "eligible": true,
+      "target_class": "synthetic-repo",
+      "compatibility_evidence_digest": "sha256:1789c23fcd038683e5d4553eb2f993802a4f92634ebc20a2ffd70e2f820b9d99"
+    },
+    {
+      "mode": "production_synthetic",
+      "eligible": false,
+      "target_class": "synthetic-repo",
+      "compatibility_evidence_digest": "sha256:1789c23fcd038683e5d4553eb2f993802a4f92634ebc20a2ffd70e2f820b9d99"
+    }
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "key_scenarios-2026q3",
+    "value": "mE9oJm3Tc1VbQ6yK0fHzXvW8nG4pA2sD7uL5eR1iO9tYb3Nc6xZ0qM4kP7hU2jF5wE8rT1yB3"
+  },
+  "created_at": "2026-09-08T14:40:00Z"
+}

@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/scenario-version.schema.json",
+  "title": "ScenarioVersion",
+  "description": "Immutable signed version of a fault scenario (spec 18.1, 12.1). Lifecycle: draft, isolated validation, signed release, compatibility tests, then eligibility for defined modes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "template_id",
+    "version",
+    "status",
+    "fault",
+    "variants",
+    "prerequisites",
+    "injection_receipt",
+    "expected_observation",
+    "outcome_assertions",
+    "cleanup",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "ScenarioVersion" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idScenarioVersion" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "template_id": {
+      "type": "string",
+      "pattern": "^F\\d{2}(-\\d{2,3})?$",
+      "description": "Scenario template identifier, F01 through F24 for the initial library (spec 12). An optional -NNN suffix distinguishes independent scenarios derived from one template."
+    },
+    "version": { "$ref": "common.schema.json#/$defs/semVer" },
+    "description": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "validated", "signed", "released"],
+      "description": "Lifecycle stages from spec 12.1. validated means isolated validation passed; signed means a signed release exists; released means compatibility tests passed and mode eligibility is recorded."
+    },
+    "fault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "parameters"],
+      "properties": {
+        "kind": { "$ref": "common.schema.json#/$defs/faultKind" },
+        "parameters": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 32,
+          "additionalProperties": {
+            "type": ["string", "number", "boolean"],
+            "description": "Primitive parameter values only. Parameter keys and ranges for each registered fault primitive are validated by the compiler against the primitive registry; this contract keeps values primitive and bounded so hostile nested content cannot hide here."
+          },
+          "description": "Fault primitive parameters. The compiler resolves these against registered primitives and rejects unknown ones (spec 9.1, 9.3)."
+        },
+        "parameter_digest": { "$ref": "common.schema.json#/$defs/digest" }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16,
+      "description": "Each template includes both benign and treatment variants (spec 12); a treatment-only or benign-only set is not representable.",
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": { "kind": { "const": "benign" } }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": { "kind": { "const": "treatment" } }
+          }
+        }
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^var_[a-z0-9_-]{1,32}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["benign", "treatment"],
+            "description": "Each template includes several benign and treatment variants (spec 12)."
+          },
+          "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "fixture_digest": { "$ref": "common.schema.json#/$defs/digest" }
+        }
+      }
+    },
+    "prerequisites": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+      "description": "Environment requirements the compiler resolves before execution (spec 9.3)."
+    },
+    "injection_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["emitted_by", "fields"],
+      "properties": {
+        "emitted_by": {
+          "const": "adapter_outside_worker",
+          "description": "Injection receipts are emitted from outside the worker (spec 9.3)."
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+          "description": "Fields the injection receipt must carry for trigger verification (AC-004)."
+        }
+      }
+    },
+    "expected_observation": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000,
+      "description": "What the authoritative collectors should observe when the scenario triggers."
+    },
+    "outcome_assertions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "independent_of_monitor", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^asm_[a-z0-9_-]{1,32}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "external_state",
+              "deterministic_fixture",
+              "service_receipt",
+              "independent_grader"
+            ],
+            "description": "Assertion oracle kinds from spec 9.5, listed in preference order: external state first, then deterministic fixtures, then service receipts, then independently tested semantic graders."
+          },
+          "independent_of_monitor": {
+            "const": true,
+            "description": "The model reviewing the worker must not be the sole ground-truth oracle (spec 9.5)."
+          },
+          "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "evidence_event_kind": {
+            "$ref": "common.schema.json#/$defs/evidenceKind",
+            "description": "Authoritative evidence kind that satisfies this assertion."
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "verifier", "test"],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Declared cleanup operation for this scenario (spec 9.3)."
+        },
+        "verifier": {
+          "const": "independent_cleanup_verifier",
+          "description": "Cleanup is verified independently, never by worker exit (spec 13.3)."
+        },
+        "test": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Cleanup test that must pass for release (spec 12)."
+        }
+      }
+    },
+    "mode_eligibility": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "eligible", "target_class", "compatibility_evidence_digest"],
+        "properties": {
+          "mode": { "$ref": "common.schema.json#/$defs/operatingMode" },
+          "eligible": { "type": "boolean" },
+          "target_class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "description": "Target class this classification applies to. Production-safe classification is a reviewed property of a specific primitive version and target class (spec 12.1); updating either invalidates it."
+          },
+          "compatibility_evidence_digest": {
+            "$ref": "common.schema.json#/$defs/digest",
+            "description": "Compatibility test evidence for this primitive version and target class (spec 12.1)."
+          }
+        }
+      },
+      "description": "Mode eligibility recorded after compatibility tests. Required for released scenarios."
+    },
+    "signature": {
+      "$ref": "common.schema.json#/$defs/signature",
+      "description": "Signed release. Required once status is signed or released."
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "enum": ["signed", "released"] } },
+        "required": ["status"]
+      },
+      "then": { "required": ["signature"] }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "released" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["mode_eligibility"] }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["draft", "validated"] } },
+        "required": ["status"]
+      },
+      "then": { "not": { "required": ["mode_eligibility"] } }
+    }
+  ]
+}

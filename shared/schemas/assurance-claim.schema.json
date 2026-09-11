@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/assurance-claim.schema.json",
+  "title": "AssuranceClaim",
+  "description": "A scoped empirical conclusion with its assumptions (spec 18.1, 14.1). Immutable revisions that may become stale. A claim is a statement about a defined outcome for a defined workload and versioned system, never a judgment about model character.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "claim_revision",
+    "status",
+    "hazard",
+    "scope",
+    "provenance",
+    "estimate",
+    "assumptions",
+    "freshness",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "AssuranceClaim" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/idAssuranceClaim" },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "claim_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Immutable revision counter; changes produce a new revision (spec 18.1)."
+    },
+    "supersedes_claim_id": { "$ref": "common.schema.json#/$defs/idAssuranceClaim" },
+    "status": { "$ref": "common.schema.json#/$defs/assuranceStatus" },
+    "stale_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "Required when status is STALE; names the invalidation trigger that fired (spec 14.7)."
+    },
+    "hazard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "severity", "failure_event", "unit_of_observation"],
+      "description": "The defined hazard, its severity, the measurable failure event, and the denominator unit (spec 14.1).",
+      "properties": {
+        "description": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "severity": { "$ref": "common.schema.json#/$defs/severityClass" },
+        "failure_event": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "Observable definition of one failure, verified outside final agent text (spec 9.5)."
+        },
+        "unit_of_observation": {
+          "type": "string",
+          "enum": ["action", "session", "task", "cluster", "experiment"],
+          "description": "The exposure unit of the denominator. A per-action bound must not be displayed as per-session or per-task bound (spec 14.3)."
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workload_version_id",
+        "fingerprints"
+      ],
+      "description": "The versioned system the claim covers (spec 14.1).",
+      "properties": {
+        "workload_version_id": { "$ref": "common.schema.json#/$defs/idWorkloadVersion" },
+        "autonomy_profile_id": { "$ref": "common.schema.json#/$defs/idAutonomyProfile" },
+        "fingerprints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "harness",
+            "tools",
+            "policy",
+            "monitor",
+            "scenario_distribution",
+            "environment"
+          ],
+          "description": "System fingerprints the claim binds to (spec 14.1). Any change invalidates the affected scope (spec 14.7).",
+          "properties": {
+            "model": { "$ref": "common.schema.json#/$defs/digest" },
+            "harness": { "$ref": "common.schema.json#/$defs/digest" },
+            "tools": { "$ref": "common.schema.json#/$defs/digest" },
+            "policy": { "$ref": "common.schema.json#/$defs/digest" },
+            "monitor": { "$ref": "common.schema.json#/$defs/digest" },
+            "scenario_distribution": { "$ref": "common.schema.json#/$defs/digest" },
+            "environment": { "$ref": "common.schema.json#/$defs/digest" }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_category",
+        "observation_window",
+        "coverage_gaps",
+        "selection_procedure",
+        "label_source",
+        "data_sources"
+      ],
+      "description": "Data provenance, observation window, coverage gaps, selection procedure, and label source (spec 14.1).",
+      "properties": {
+        "evidence_category": {
+          "$ref": "common.schema.json#/$defs/evidenceCategory",
+          "description": "The four evidence categories stay separate; an adversarial challenge-set rate is not a production prevalence estimate (spec 14.2)."
+        },
+        "observation_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": {
+            "from": { "$ref": "common.schema.json#/$defs/utcTimestamp" },
+            "to": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+          }
+        },
+        "coverage_gaps": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "description": "Known coverage gaps. Zero detected failures with incomplete visibility is weaker evidence (spec 14.3)."
+        },
+        "selection_procedure": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "Sample-selection procedure, including whether the cohort was preregistered and fixed (spec 14.4)."
+        },
+        "label_source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "How outcomes were labeled and by whom (spec 15.2)."
+        },
+        "data_sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/idEvidenceEvent" },
+          "description": "Evidence events and records the estimate draws from."
+        },
+        "injection_funnel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "selected",
+            "eligible",
+            "triggered",
+            "untriggered",
+            "harness_error",
+            "verified_outcomes"
+          ],
+          "description": "Selection-to-verification funnel for challenge-set claims (spec 14.2). The four categories stay separate; the funnel shows how many selected injections produced verified outcomes.",
+          "properties": {
+            "selected": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Injections selected for the estimate."
+            },
+            "eligible": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Selected injections that met eligibility criteria."
+            },
+            "triggered": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Eligible injections that actually triggered."
+            },
+            "untriggered": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Eligible injections that did not trigger."
+            },
+            "harness_error": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Injections lost to harness errors, never folded into passes (spec 14.4)."
+            },
+            "verified_outcomes": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Outcomes verified against independent assertions (spec 9.5)."
+            }
+          }
+        }
+      }
+    },
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "failures",
+        "eligible_observations",
+        "unresolved",
+        "confidence_level",
+        "upper_bound",
+        "sensitivity_all_unresolved_failures",
+        "acceptance_threshold"
+      ],
+      "description": "Fixed-cohort estimate. Exact one-sided binomial upper bound: p_upper = 1 - alpha^(1/n) (spec 14.3). Task T022 computes and checks these values; the contract fixes the reported fields.",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["exact_one_sided_binomial_upper_bound"],
+          "description": "Only validated methods are representable; weighted counts must not feed the exact formula (spec 14.4)."
+        },
+        "failures": { "type": "integer", "minimum": 0 },
+        "eligible_observations": { "type": "integer", "minimum": 0 },
+        "unresolved": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Known unresolved outcomes are reported explicitly, never folded into passes (spec 14.4)."
+        },
+        "confidence_level": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "upper_bound": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Upper confidence bound on the failure probability under the stated assumptions."
+        },
+        "sensitivity_all_unresolved_failures": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Conservative sensitivity treating every unresolved case as a failure (spec 14.4)."
+        },
+        "acceptance_threshold": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "Target the claim is tested against, for example 0.0001 for a four-nines target."
+        }
+      }
+    },
+    "assumptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dependence_model",
+        "dependence_description",
+        "population_applicability",
+        "exclusions"
+      ],
+      "description": "Dependence assumptions, population applicability, and exclusions (spec 14.1).",
+      "properties": {
+        "dependence_model": {
+          "type": "string",
+          "enum": ["independent_bernoulli", "clustered_reported_at_cluster_level"],
+          "description": "Independent Bernoulli trials, or clustered outcomes reported at the valid cluster unit (spec 14.4)."
+        },
+        "cluster_unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Concrete clustering unit, for example session or user journey, when outcomes are clustered (spec 14.4)."
+        },
+        "cluster_id_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^cid_[A-Za-z0-9_-]{4,128}$" },
+          "description": "Correlation identifiers of the clusters the estimate covers (spec 14.4)."
+        },
+        "dependence_description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "population_applicability": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "The population the bound applies to (spec 14.1)."
+        },
+        "exclusions": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "type": "string", "minLength": 1, "maxLength": 2000 }
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid_until", "invalidation_triggers"],
+      "description": "Expiration and change-triggered invalidation (spec 14.1, 14.7).",
+      "properties": {
+        "valid_until": {
+          "$ref": "common.schema.json#/$defs/utcTimestamp",
+          "description": "Expiration. A seven-day default is a review cadence, not evidence the distribution still holds (spec 14.7)."
+        },
+        "invalidation_triggers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "model_identity_change",
+              "prompt_change",
+              "policy_change",
+              "tool_change",
+              "topology_change",
+              "isolation_test_failure",
+              "distribution_drift",
+              "telemetry_gap"
+            ]
+          }
+        }
+      }
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "STALE" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["stale_reason"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "assumptions": {
+            "properties": { "dependence_model": { "const": "clustered_reported_at_cluster_level" } },
+            "required": ["dependence_model"]
+          }
+        },
+        "required": ["assumptions"]
+      },
+      "then": {
+        "properties": {
+          "hazard": {
+            "properties": {
+              "unit_of_observation": { "enum": ["cluster", "task"] }
+            }
+          },
+          "assumptions": { "required": ["cluster_unit", "cluster_id_refs"] }
+        }
+      },
+      "description": "Clustered outcomes are reported at the cluster or task unit and name the clustering unit and its identifiers (spec 14.3, 14.4)."
+    },
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": { "evidence_category": { "const": "challenge_set_failure" } },
+            "required": ["evidence_category"]
+          }
+        },
+        "required": ["provenance"]
+      },
+      "then": {
+        "properties": {
+          "provenance": { "required": ["injection_funnel"] }
+        }
+      },
+      "description": "A challenge-set failure rate must report its injection funnel. Without it, a rate over silent non-triggers reads as a defense success (spec 14.2, AC-018)."
+    }
+  ]
+}

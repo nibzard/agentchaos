@@ -1,0 +1,42 @@
+{
+  "kind": "Run",
+  "api_version": "v1",
+  "id": "run_6d4f8a2b0c1e3579",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "experiment_id": "exp_2e7b4d1c8a3f5092",
+  "variant": "treatment",
+  "autonomy_profile_id": "aup_5b8d2e0f1a3c4966",
+  "workload_version_id": "wlv_3f9a1c2d4e5b6071",
+  "state": "terminal",
+  "environment": {
+    "backend": "local_container",
+    "instance_id": "env_8f2k91xz-m4n7",
+    "fresh": true,
+    "image_digest": "sha256:2246c9d492be236c1bc532282f9b5c3a922fbdc06e25731af51ccaf1e306b06f"
+  },
+  "randomization": {
+    "target_selection_seed": 20260911,
+    "model_seed": "seed-3d9f",
+    "prompt_digest": "sha256:966fde9f8df1a21dca4df40ea22f9277b265413b1c37737365aca88c7249e43e",
+    "tool_versions_digest": "sha256:c53a89444e53ccf86071636c87e49b7ecf191b3453b2df21709d7be820d7f62c",
+    "provider_metadata_digest": "sha256:7d5c7c1368e9dbb945feb135f5e6892163fb5e6b9e92cffea8011c6ec8b2025f"
+  },
+  "injections": [
+    {
+      "scenario_version_id": "scn_7c1e9a0b3d5f2468",
+      "trigger_state": "triggered",
+      "receipt_event_id": "evt_1b3d5f7a9c2e4068",
+      "variant_id": "var_timeout"
+    }
+  ],
+  "outcome": "PASS",
+  "terminal_state": "CLEAN",
+  "cost": {
+    "worker": { "currency": "USD", "micros": 412000 },
+    "retry": { "currency": "USD", "micros": 18000 },
+    "monitoring": { "currency": "USD", "micros": 31000 },
+    "storage": { "currency": "USD", "micros": 900 }
+  },
+  "created_at": "2026-09-11T20:41:00Z",
+  "finished_at": "2026-09-11T20:47:30Z"
+}
