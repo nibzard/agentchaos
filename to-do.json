@@ -83,7 +83,7 @@
       "id": "T003",
       "title": "Implement the experiment manifest compiler",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Compile manifests into signed plans. Reject unknown fields, incompatible modes, ambiguous selectors, missing dependencies, stale credentials, unsupported rollback claims, and missing effect sinks.",
       "steps": [
         "Parse versioned manifests.",
@@ -97,7 +97,25 @@
       "tags": [
         "compiler",
         "security"
-      ]
+      ],
+      "files": [
+        "control-plane/pyproject.toml",
+        "control-plane/README.md",
+        "control-plane/acx_compiler/__init__.py",
+        "control-plane/acx_compiler/canonical.py",
+        "control-plane/acx_compiler/compiler.py",
+        "control-plane/acx_compiler/errors.py",
+        "control-plane/acx_compiler/plan.py",
+        "control-plane/acx_compiler/records.py",
+        "control-plane/acx_compiler/risk.py",
+        "control-plane/acx_compiler/signing.py",
+        "control-plane/tests/conftest.py",
+        "control-plane/tests/test_canonical.py",
+        "control-plane/tests/test_compiler.py",
+        "control-plane/tests/test_risk.py",
+        "shared/fixtures/valid/experiment.json"
+      ],
+      "updated_at": "2026-09-11T23:58:34Z"
     },
     {
       "id": "T004",

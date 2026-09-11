@@ -35,6 +35,7 @@
         "broker_decision",
         "external_receipt",
         "injection_receipt",
+        "tool_response",
         "collector_heartbeat"
       ],
       "mandatory": true,
