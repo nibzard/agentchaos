@@ -1,0 +1,873 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "AgentChaos",
+    "root": "."
+  },
+  "source_files": [
+    "AgentChaos_Product_Spec_v0.1.md"
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Select the initial application stack and repository layout",
+      "priority": 1,
+      "status": "done",
+      "details": "Create the first implementation layout for the control plane, execution plane, evidence plane, broker, CLI, and UI.",
+      "tags": [
+        "architecture",
+        "setup"
+      ],
+      "updated_at": "2026-09-11T21:32:40Z",
+      "files": [
+        "docs/architecture/0001-initial-stack-and-layout.md",
+        "broker/.gitkeep",
+        "cli/acx/.gitkeep",
+        "control-plane/.gitkeep",
+        "evidence-plane/.gitkeep",
+        "execution-plane/.gitkeep",
+        "governor/.gitkeep",
+        "shared/.gitkeep",
+        "ui/.gitkeep"
+      ]
+    },
+    {
+      "id": "T002",
+      "title": "Create strict schema contracts for core resources",
+      "priority": 1,
+      "status": "doing",
+      "details": "Define schemas for workload versions, autonomy profiles, scenario versions, experiments, runs, delegations, effects, evidence events, findings, and assurance claims.",
+      "depends_on": [
+        "T001"
+      ],
+      "tags": [
+        "schemas",
+        "api"
+      ],
+      "updated_at": "2026-09-11T21:44:57Z"
+    },
+    {
+      "id": "T003",
+      "title": "Implement the experiment manifest compiler",
+      "priority": 1,
+      "status": "todo",
+      "details": "Compile manifests into signed plans. Reject unknown fields, incompatible modes, ambiguous selectors, missing dependencies, stale credentials, unsupported rollback claims, and missing effect sinks.",
+      "steps": [
+        "Parse versioned manifests.",
+        "Resolve workload, profile, scenario, selector, budget, assertion, and stop-rule references.",
+        "Classify risk and mode eligibility.",
+        "Produce a plan with artifact digests."
+      ],
+      "depends_on": [
+        "T002"
+      ],
+      "tags": [
+        "compiler",
+        "security"
+      ]
+    },
+    {
+      "id": "T004",
+      "title": "Implement enrollment and target selection",
+      "priority": 1,
+      "status": "todo",
+      "details": "Require explicit enrolled targets. Make selector expansion fail closed when targets are not enrolled or when production selection is ambiguous.",
+      "depends_on": [
+        "T003"
+      ],
+      "tags": [
+        "control-plane",
+        "security"
+      ]
+    },
+    {
+      "id": "T005",
+      "title": "Implement the local fixture runner",
+      "priority": 1,
+      "status": "todo",
+      "details": "Run baseline and treatment variants in fresh disposable environments and export paired results with workload fingerprints.",
+      "depends_on": [
+        "T003"
+      ],
+      "tags": [
+        "runner",
+        "fixtures"
+      ]
+    },
+    {
+      "id": "T006",
+      "title": "Build the generic brokered HTTP tool interface",
+      "priority": 1,
+      "status": "todo",
+      "details": "Route supported external tool calls through a brokered HTTP interface with clear side-effect semantics and receipts.",
+      "depends_on": [
+        "T002"
+      ],
+      "tags": [
+        "broker",
+        "adapter"
+      ]
+    },
+    {
+      "id": "T007",
+      "title": "Implement the effect broker state machine",
+      "priority": 1,
+      "status": "todo",
+      "details": "Implement proposed, authorized, prepared, committing, committed, denied, expired, cancelled, unknown-effect, and compensating states.",
+      "steps": [
+        "Bind authorization to tenant, task, actor, resource, destination, argument digest, policy version, expiry, and nonce.",
+        "Record intent and decision before dispatch.",
+        "Use idempotency keys where supported.",
+        "Reconcile unknown dispatch outcomes before retry."
+      ],
+      "depends_on": [
+        "T006"
+      ],
+      "tags": [
+        "broker",
+        "effects"
+      ]
+    },
+    {
+      "id": "T008",
+      "title": "Implement bounded delegation",
+      "priority": 1,
+      "status": "todo",
+      "details": "Ensure child agents can only narrow capabilities and share the parent cumulative budget.",
+      "depends_on": [
+        "T007"
+      ],
+      "tags": [
+        "security",
+        "delegation"
+      ]
+    },
+    {
+      "id": "T009",
+      "title": "Implement the independent safety governor",
+      "priority": 1,
+      "status": "todo",
+      "details": "Enforce short-lived grants, heartbeats, selectors, budgets, trip conditions, emergency fencing, and cleanup handoff outside the worker environment.",
+      "depends_on": [
+        "T003",
+        "T007"
+      ],
+      "tags": [
+        "governor",
+        "security"
+      ]
+    },
+    {
+      "id": "T010",
+      "title": "Implement stop and cleanup protocols",
+      "priority": 1,
+      "status": "todo",
+      "details": "Revoke effect permits, disable injectors, fence delegation groups, cancel pending effects, reconcile receipts, run cleanup verification, and record clean, dirty-quarantined, or unknown terminal state.",
+      "depends_on": [
+        "T009"
+      ],
+      "tags": [
+        "recovery",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "T011",
+      "title": "Implement authoritative evidence collection",
+      "priority": 1,
+      "status": "todo",
+      "details": "Collect worker claims, broker decisions, external receipts, injection receipts, collector heartbeats, monitor interpretations, and recovery actions as separate trust-labeled records.",
+      "depends_on": [
+        "T002",
+        "T007"
+      ],
+      "tags": [
+        "evidence",
+        "storage"
+      ]
+    },
+    {
+      "id": "T012",
+      "title": "Implement event ordering and integrity metadata",
+      "priority": 1,
+      "status": "todo",
+      "details": "Store per-source sequence numbers, correlation IDs, parent edges, clock uncertainty, signed checkpoints, and explicit gap findings.",
+      "depends_on": [
+        "T011"
+      ],
+      "tags": [
+        "evidence",
+        "integrity"
+      ]
+    },
+    {
+      "id": "T013",
+      "title": "Implement independent outcome assertions",
+      "priority": 1,
+      "status": "todo",
+      "details": "Verify effects through external state, service receipts, deterministic fixtures, or independently tested graders instead of final agent text.",
+      "depends_on": [
+        "T011"
+      ],
+      "tags": [
+        "verifier",
+        "evaluation"
+      ]
+    },
+    {
+      "id": "T014",
+      "title": "Implement run result classification",
+      "priority": 1,
+      "status": "todo",
+      "details": "Classify outcomes as pass, fail, inconclusive, not-triggered, or harness-error. Keep unknown and untriggered cases separate from passes.",
+      "depends_on": [
+        "T005",
+        "T013"
+      ],
+      "tags": [
+        "runner",
+        "results"
+      ]
+    },
+    {
+      "id": "T015",
+      "title": "Create the 24 initial scenario templates",
+      "priority": 1,
+      "status": "todo",
+      "details": "Implement fixture, treatment variant, injection receipt, expected observation, outcome assertion, and cleanup test for scenario templates F01 through F24.",
+      "depends_on": [
+        "T005",
+        "T011",
+        "T013"
+      ],
+      "tags": [
+        "scenarios",
+        "fixtures"
+      ]
+    },
+    {
+      "id": "T016",
+      "title": "Implement scenario lifecycle and signing",
+      "priority": 2,
+      "status": "todo",
+      "details": "Support draft, isolated validation, signed release, compatibility tests, and mode eligibility for scenario versions.",
+      "depends_on": [
+        "T015"
+      ],
+      "tags": [
+        "scenarios",
+        "supply-chain"
+      ]
+    },
+    {
+      "id": "T017",
+      "title": "Implement deterministic supervision gates",
+      "priority": 1,
+      "status": "todo",
+      "details": "Enforce scope, limits, version binding, and hard denies for every supported external effect without relying on an LLM decision.",
+      "depends_on": [
+        "T007"
+      ],
+      "tags": [
+        "supervision",
+        "policy"
+      ]
+    },
+    {
+      "id": "T018",
+      "title": "Implement fast and contextual review contracts",
+      "priority": 2,
+      "status": "todo",
+      "details": "Return allow, watch, deny, or abstain with policy references, event references, rationale, limitations, model or prompt version, and latency.",
+      "depends_on": [
+        "T011",
+        "T017"
+      ],
+      "tags": [
+        "supervision",
+        "review"
+      ]
+    },
+    {
+      "id": "T019",
+      "title": "Implement final session review",
+      "priority": 2,
+      "status": "todo",
+      "details": "Run structured checks over complete event sequences. Mark sessions incomplete when logs exceed review budgets or required evidence is missing.",
+      "depends_on": [
+        "T011",
+        "T018"
+      ],
+      "tags": [
+        "supervision",
+        "review"
+      ]
+    },
+    {
+      "id": "T020",
+      "title": "Implement safe degradation behavior",
+      "priority": 1,
+      "status": "todo",
+      "details": "Let permitted local work continue when reviewers fail, but hold effects that require the missing review. Fence external effects when mandatory evidence capture fails.",
+      "depends_on": [
+        "T009",
+        "T018"
+      ],
+      "tags": [
+        "resilience",
+        "security"
+      ]
+    },
+    {
+      "id": "T021",
+      "title": "Implement profile comparison",
+      "priority": 2,
+      "status": "todo",
+      "details": "Compare hard-controls-only, classifier-assisted, contextual review, full-call review, and session review profiles with matched workloads and separate utility, safety, latency, and cost metrics.",
+      "depends_on": [
+        "T014",
+        "T018",
+        "T019"
+      ],
+      "tags": [
+        "analysis",
+        "profiles"
+      ]
+    },
+    {
+      "id": "T022",
+      "title": "Implement fixed-cohort assurance calculations",
+      "priority": 1,
+      "status": "todo",
+      "details": "Calculate exact one-sided binomial upper bounds for fixed cohorts. Report failures, eligible observations, unresolved outcomes, confidence level, assumptions, and expiration.",
+      "depends_on": [
+        "T014"
+      ],
+      "tags": [
+        "statistics",
+        "assurance"
+      ]
+    },
+    {
+      "id": "T023",
+      "title": "Implement claim freshness invalidation",
+      "priority": 2,
+      "status": "todo",
+      "details": "Mark affected assurance claims stale when model identity, prompt, policy, tools, topology, isolation tests, drift, or telemetry gaps change.",
+      "depends_on": [
+        "T022"
+      ],
+      "tags": [
+        "assurance",
+        "versioning"
+      ]
+    },
+    {
+      "id": "T024",
+      "title": "Implement random sentinel audit sampling",
+      "priority": 2,
+      "status": "todo",
+      "details": "Run a nonzero uniform random deep-review sample on clean traffic and log inclusion probability and randomization keys outside worker access.",
+      "depends_on": [
+        "T019"
+      ],
+      "tags": [
+        "sampling",
+        "audit"
+      ]
+    },
+    {
+      "id": "T025",
+      "title": "Implement cost and resource accounting",
+      "priority": 2,
+      "status": "todo",
+      "details": "Report worker, retry, monitoring, storage, review, and experiment costs by workload and control profile.",
+      "depends_on": [
+        "T005",
+        "T018"
+      ],
+      "tags": [
+        "cost",
+        "metrics"
+      ]
+    },
+    {
+      "id": "T026",
+      "title": "Implement the beta HTTP API",
+      "priority": 1,
+      "status": "todo",
+      "details": "Add endpoints for experiments, validation, runs, stop requests, evidence ingest, effect authorization, effect commit, assurance claims, and safety levers.",
+      "depends_on": [
+        "T002",
+        "T003",
+        "T007",
+        "T009",
+        "T011"
+      ],
+      "tags": [
+        "api",
+        "backend"
+      ]
+    },
+    {
+      "id": "T027",
+      "title": "Implement API authentication and tenant isolation",
+      "priority": 1,
+      "status": "todo",
+      "details": "Bind identity to tenant server-side. Prevent workers from ingesting collector events, issuing effect permits, changing experiments, or disengaging safety levers.",
+      "depends_on": [
+        "T026"
+      ],
+      "tags": [
+        "api",
+        "security"
+      ]
+    },
+    {
+      "id": "T028",
+      "title": "Implement API idempotency and error contracts",
+      "priority": 2,
+      "status": "todo",
+      "details": "Require idempotency keys for mutations. Reject reuse with a different body digest. Return stable error codes, safe messages, retryability, and request IDs.",
+      "depends_on": [
+        "T026"
+      ],
+      "tags": [
+        "api",
+        "reliability"
+      ]
+    },
+    {
+      "id": "T029",
+      "title": "Implement the acx CLI",
+      "priority": 1,
+      "status": "todo",
+      "details": "Support validate, run, compare, inspect, stop, report, and assurance explain commands with stable exit codes 0, 2, 3, 4, and 5.",
+      "depends_on": [
+        "T003",
+        "T005",
+        "T021",
+        "T022",
+        "T026"
+      ],
+      "tags": [
+        "cli",
+        "developer-experience"
+      ]
+    },
+    {
+      "id": "T030",
+      "title": "Implement portable report export",
+      "priority": 2,
+      "status": "todo",
+      "details": "Export machine-readable and readable reports with artifacts, version IDs, synthetic or production distinction, evidence references, and gate status.",
+      "depends_on": [
+        "T014",
+        "T021",
+        "T022",
+        "T029"
+      ],
+      "tags": [
+        "reports",
+        "ci"
+      ]
+    },
+    {
+      "id": "T031",
+      "title": "Build the workload overview UI",
+      "priority": 2,
+      "status": "todo",
+      "details": "Show workload versions, supported modes, coverage gaps, autonomy profile, throughput, failures, freshness, and cost.",
+      "depends_on": [
+        "T026"
+      ],
+      "tags": [
+        "ui",
+        "dashboard"
+      ]
+    },
+    {
+      "id": "T032",
+      "title": "Build the experiment builder UI",
+      "priority": 2,
+      "status": "todo",
+      "details": "Let operators select a workload, scenario pack, baseline and treatment profiles, selectors, budgets, and schedule after compiled-plan preview.",
+      "depends_on": [
+        "T003",
+        "T026",
+        "T031"
+      ],
+      "tags": [
+        "ui",
+        "experiments"
+      ]
+    },
+    {
+      "id": "T033",
+      "title": "Build the run timeline UI",
+      "priority": 2,
+      "status": "todo",
+      "details": "Display agent, tool, broker, injection, monitor, and infrastructure events on separate trust-labeled lanes with links to raw evidence and receipts.",
+      "depends_on": [
+        "T011",
+        "T026",
+        "T031"
+      ],
+      "tags": [
+        "ui",
+        "evidence"
+      ]
+    },
+    {
+      "id": "T034",
+      "title": "Build the comparison and assurance UI",
+      "priority": 2,
+      "status": "todo",
+      "details": "Show utility, safety, latency, and cost tradeoffs. Show scoped evidence cards without a single universal safety score.",
+      "depends_on": [
+        "T021",
+        "T022",
+        "T023",
+        "T031"
+      ],
+      "tags": [
+        "ui",
+        "assurance"
+      ]
+    },
+    {
+      "id": "T035",
+      "title": "Build the recovery and governance UI",
+      "priority": 2,
+      "status": "todo",
+      "details": "Show fenced groups, unknown effects, dirty environments, compensation attempts, cleanup receipts, emergency safety controls, and policy audit history.",
+      "depends_on": [
+        "T009",
+        "T010",
+        "T026",
+        "T031"
+      ],
+      "tags": [
+        "ui",
+        "governance"
+      ]
+    },
+    {
+      "id": "T036",
+      "title": "Make evidence rendering inert",
+      "priority": 1,
+      "status": "todo",
+      "details": "Render hostile payloads as inert text. Prevent active HTML, tool execution, or automatic external retrieval from logs.",
+      "depends_on": [
+        "T033"
+      ],
+      "tags": [
+        "ui",
+        "security"
+      ]
+    },
+    {
+      "id": "T037",
+      "title": "Implement raw payload minimization and retention",
+      "priority": 2,
+      "status": "todo",
+      "details": "Minimize and redact captured content before it leaves the execution plane. Support retention windows, tombstones, payload deletion, and legal holds.",
+      "depends_on": [
+        "T011"
+      ],
+      "tags": [
+        "privacy",
+        "evidence"
+      ]
+    },
+    {
+      "id": "T038",
+      "title": "Implement credential and signing key management",
+      "priority": 1,
+      "status": "todo",
+      "details": "Use scoped service identities, short-lived credentials, tenant-isolated encryption contexts, signed scenario artifacts, and signed experiment grants.",
+      "depends_on": [
+        "T003",
+        "T009",
+        "T016",
+        "T027"
+      ],
+      "tags": [
+        "security",
+        "identity"
+      ]
+    },
+    {
+      "id": "T039",
+      "title": "Implement adapter conformance tests",
+      "priority": 2,
+      "status": "todo",
+      "details": "Test advertised capabilities, unsupported paths, interception location, side-effect semantics, logging, teardown, isolation coverage, and cleanup guarantees.",
+      "depends_on": [
+        "T006",
+        "T015"
+      ],
+      "tags": [
+        "adapters",
+        "tests"
+      ]
+    },
+    {
+      "id": "T040",
+      "title": "Add unit and property tests for core logic",
+      "priority": 1,
+      "status": "todo",
+      "details": "Test parsers, authorization, accounting, statistics, capability attenuation, and state transitions.",
+      "depends_on": [
+        "T003",
+        "T007",
+        "T008",
+        "T022",
+        "T025"
+      ],
+      "tags": [
+        "tests",
+        "quality"
+      ]
+    },
+    {
+      "id": "T041",
+      "title": "Add integration and fault tests",
+      "priority": 1,
+      "status": "todo",
+      "details": "Test adapters, effect receipts, storage faults, queue faults, clock issues, reviewer outages, cleanup failures, dishonest transcripts, bypass attempts, unknown effects, and verifier failures.",
+      "depends_on": [
+        "T010",
+        "T011",
+        "T013",
+        "T015",
+        "T018"
+      ],
+      "tags": [
+        "tests",
+        "faults"
+      ]
+    },
+    {
+      "id": "T042",
+      "title": "Add manifest and evidence parser fuzzing",
+      "priority": 2,
+      "status": "todo",
+      "details": "Fuzz security-sensitive manifests, verdicts, and evidence batches. Confirm unknown fields and malformed content fail closed.",
+      "depends_on": [
+        "T003",
+        "T011",
+        "T018"
+      ],
+      "tags": [
+        "tests",
+        "fuzzing"
+      ]
+    },
+    {
+      "id": "T043",
+      "title": "Create benchmark reports for beta targets",
+      "priority": 3,
+      "status": "todo",
+      "details": "Measure deterministic gate latency, reviewer deadlines, overhead, monitoring cost, event ingest, broker throughput, grant expiry, fencing acknowledgment, durability, setup time, and integration time.",
+      "depends_on": [
+        "T005",
+        "T007",
+        "T009",
+        "T011",
+        "T018",
+        "T029"
+      ],
+      "tags": [
+        "benchmarks",
+        "operations"
+      ]
+    },
+    {
+      "id": "T044",
+      "title": "Create controlled-beta exit gate checks",
+      "priority": 2,
+      "status": "todo",
+      "details": "Automate or document acceptance evidence for B1 through B10, including scenario trigger coverage, boundary conformance, benign false intervention, utility loss, outage safety, evidence quality, benchmarks, pilots, and naming clearance.",
+      "depends_on": [
+        "T015",
+        "T030",
+        "T039",
+        "T040",
+        "T041",
+        "T043"
+      ],
+      "tags": [
+        "release",
+        "acceptance"
+      ]
+    },
+    {
+      "id": "T045",
+      "title": "Prepare open-core packaging",
+      "priority": 3,
+      "status": "todo",
+      "details": "Package the scenario specification, schemas, CLI, local runner, fixture environments, synthetic scenario pack, adapter interface, evidence format, comparison code, statistics code, local UI, and basic safety controls.",
+      "depends_on": [
+        "T015",
+        "T021",
+        "T022",
+        "T029",
+        "T031"
+      ],
+      "tags": [
+        "packaging",
+        "open-source"
+      ]
+    },
+    {
+      "id": "T046",
+      "title": "Resolve name and license readiness",
+      "priority": 1,
+      "status": "todo",
+      "details": "Clear the working name before public release. Review third-party licenses and avoid implying affiliation with the existing AgentChaos repository.",
+      "tags": [
+        "legal",
+        "release"
+      ]
+    },
+    {
+      "id": "T047",
+      "title": "Plan and run design partner pilots",
+      "priority": 3,
+      "status": "todo",
+      "details": "Run pilots that compare approval-heavy workflows, reproduce update-caused failures, and compare existing tests with system-level monitor and cleanup faults.",
+      "depends_on": [
+        "T030",
+        "T044"
+      ],
+      "tags": [
+        "pilots",
+        "go-to-market"
+      ]
+    },
+    {
+      "id": "T048",
+      "title": "Implement the MCP adapter",
+      "priority": 4,
+      "status": "todo",
+      "details": "Add a Model Context Protocol adapter that preserves audience-bound authorization and avoids downstream token passthrough.",
+      "depends_on": [
+        "T039"
+      ],
+      "tags": [
+        "p1",
+        "adapter"
+      ]
+    },
+    {
+      "id": "T049",
+      "title": "Implement synthetic production mode",
+      "priority": 4,
+      "status": "todo",
+      "details": "Run enrolled synthetic identities through production-path infrastructure after isolated and integration gates pass, with independent kill and cleanup gates.",
+      "depends_on": [
+        "T009",
+        "T010",
+        "T016",
+        "T044"
+      ],
+      "tags": [
+        "p1",
+        "production-synthetic"
+      ]
+    },
+    {
+      "id": "T050",
+      "title": "Implement fleet trajectory analysis",
+      "priority": 4,
+      "status": "todo",
+      "details": "Find synthetic cross-run communication patterns across sessions while preserving provenance and tenant isolation.",
+      "depends_on": [
+        "T011",
+        "T012",
+        "T027"
+      ],
+      "tags": [
+        "p1",
+        "analysis"
+      ]
+    },
+    {
+      "id": "T051",
+      "title": "Implement heterogeneous reviewer panels",
+      "priority": 4,
+      "status": "todo",
+      "details": "Support independent first-pass reviewers, adjudication after findings are fixed, matched-cost evaluation, and co-miss measurements.",
+      "depends_on": [
+        "T018",
+        "T019",
+        "T021"
+      ],
+      "tags": [
+        "p1",
+        "review"
+      ]
+    },
+    {
+      "id": "T052",
+      "title": "Implement automated profile promotion",
+      "priority": 4,
+      "status": "todo",
+      "details": "Promote only preapproved profiles after development, held-out, and shadow gates pass. Prevent silent weakening of root policy.",
+      "depends_on": [
+        "T021",
+        "T023",
+        "T044"
+      ],
+      "tags": [
+        "p1",
+        "profiles"
+      ]
+    },
+    {
+      "id": "T053",
+      "title": "Implement advanced sampling and statistics",
+      "priority": 5,
+      "status": "todo",
+      "details": "Add validated handling for clustered outcomes, adaptive sampling, sequential tests, weighted samples, and multiple comparisons.",
+      "depends_on": [
+        "T022",
+        "T024"
+      ],
+      "tags": [
+        "p1",
+        "statistics"
+      ]
+    },
+    {
+      "id": "T054",
+      "title": "Research generated long-horizon scenarios",
+      "priority": 5,
+      "status": "todo",
+      "details": "Generate scenarios only in sandbox evaluation, preserve them as reproducible artifacts, test containment, and keep public suites separate from private holdouts.",
+      "depends_on": [
+        "T016",
+        "T044"
+      ],
+      "tags": [
+        "p2",
+        "research"
+      ]
+    },
+    {
+      "id": "T055",
+      "title": "Design real-customer canary support",
+      "priority": 5,
+      "status": "todo",
+      "details": "Define opt-in primitive classes, reversible semantics, target selection, automatic stop rules, tested containment, and residual-risk documentation for later real-customer canaries.",
+      "depends_on": [
+        "T049"
+      ],
+      "tags": [
+        "p2",
+        "canary"
+      ]
+    }
+  ]
+}
