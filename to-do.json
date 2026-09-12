@@ -1164,7 +1164,7 @@
       "id": "T044",
       "title": "Create controlled-beta exit gate checks",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Automate or document acceptance evidence for B1 through B10, including scenario trigger coverage, boundary conformance, benign false intervention, utility loss, outage safety, evidence quality, benchmarks, pilots, and naming clearance.",
       "depends_on": [
         "T015",
@@ -1177,7 +1177,16 @@
       "tags": [
         "release",
         "acceptance"
-      ]
+      ],
+      "files": [
+        "broker/exit_gate_test.go",
+        "release/exit_gate.py",
+        "release/test_exit_gate.py",
+        "release/README.md",
+        "release/exit_gate_report.md",
+        "release/exit_gate_report.json"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T045",

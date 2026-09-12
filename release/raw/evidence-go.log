@@ -1,0 +1,3 @@
+$ go test ./... (in evidence-plane)
+?   	gauntlet/evidence/cmd/evid	[no test files]
+ok  	gauntlet/evidence	0.139s

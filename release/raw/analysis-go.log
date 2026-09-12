@@ -1,0 +1,2 @@
+$ go test ./... (in analysis)
+ok  	gauntlet/analysis	(cached)

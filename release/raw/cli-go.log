@@ -1,0 +1,3 @@
+$ go test ./... (in cli)
+?   	gauntlet/cli/acx	[no test files]
+ok  	gauntlet/cli/app	(cached)

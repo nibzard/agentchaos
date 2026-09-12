@@ -1,0 +1,79 @@
+{
+  "broker-go": {
+    "label": "Broker (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 1.4,
+    "log": "release/raw/broker-go.log"
+  },
+  "evidence-go": {
+    "label": "Evidence plane (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.4,
+    "log": "release/raw/evidence-go.log"
+  },
+  "supervisor-go": {
+    "label": "Supervisor (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.1,
+    "log": "release/raw/supervisor-go.log"
+  },
+  "governor-go": {
+    "label": "Governor (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.4,
+    "log": "release/raw/governor-go.log"
+  },
+  "control-plane-go": {
+    "label": "Control plane (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 1.1,
+    "log": "release/raw/control-plane-go.log"
+  },
+  "analysis-go": {
+    "label": "Analysis (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.1,
+    "log": "release/raw/analysis-go.log"
+  },
+  "cli-go": {
+    "label": "CLI (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.1,
+    "log": "release/raw/cli-go.log"
+  },
+  "integration-go": {
+    "label": "Cross-component integration (Go)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.3,
+    "log": "release/raw/integration-go.log"
+  },
+  "control-plane-py": {
+    "label": "Control plane compiler (Python)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 1.2,
+    "log": "release/raw/control-plane-py.log"
+  },
+  "execution-plane-py": {
+    "label": "Execution plane (Python)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.8,
+    "log": "release/raw/execution-plane-py.log"
+  },
+  "ui-bun": {
+    "label": "UI (Bun)",
+    "passed": true,
+    "exit_code": 0,
+    "seconds": 0.0,
+    "log": "release/raw/ui-bun.log"
+  }
+}

@@ -1,0 +1,3 @@
+$ go test ./... (in governor)
+?   	gauntlet/governor/cmd/governord	[no test files]
+ok  	gauntlet/governor	0.115s

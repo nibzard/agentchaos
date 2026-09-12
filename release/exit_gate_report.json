@@ -1,0 +1,181 @@
+{
+  "kind": "ExitGateReport",
+  "api_version": "v1",
+  "generated_at": "2026-09-12T15:43:45Z",
+  "verdict": "gates unmet: B2, B3, B4, B5, B6, B7, B8, B9, B10",
+  "suites": {
+    "broker-go": {
+      "label": "Broker (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 1.4,
+      "log": "release/raw/broker-go.log"
+    },
+    "evidence-go": {
+      "label": "Evidence plane (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.4,
+      "log": "release/raw/evidence-go.log"
+    },
+    "supervisor-go": {
+      "label": "Supervisor (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "release/raw/supervisor-go.log"
+    },
+    "governor-go": {
+      "label": "Governor (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.4,
+      "log": "release/raw/governor-go.log"
+    },
+    "control-plane-go": {
+      "label": "Control plane (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 1.1,
+      "log": "release/raw/control-plane-go.log"
+    },
+    "analysis-go": {
+      "label": "Analysis (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "release/raw/analysis-go.log"
+    },
+    "cli-go": {
+      "label": "CLI (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "release/raw/cli-go.log"
+    },
+    "integration-go": {
+      "label": "Cross-component integration (Go)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.3,
+      "log": "release/raw/integration-go.log"
+    },
+    "control-plane-py": {
+      "label": "Control plane compiler (Python)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 1.2,
+      "log": "release/raw/control-plane-py.log"
+    },
+    "execution-plane-py": {
+      "label": "Execution plane (Python)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.8,
+      "log": "release/raw/execution-plane-py.log"
+    },
+    "ui-bun": {
+      "label": "UI (Bun)",
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "release/raw/ui-bun.log"
+    }
+  },
+  "missing_required_cases": [],
+  "gates": [
+    {
+      "gate": "B1",
+      "requirement": "All P0 requirements have automated evidence or a documented acceptance review",
+      "status": "met",
+      "evidence": "28 acceptance criteria mapped to suites in release/exit_gate.py AC_MAP; suite runs in release/raw/",
+      "gaps": []
+    },
+    {
+      "gate": "B2",
+      "requirement": "All 24 scenario templates trigger in reference fixtures; valid trigger coverage exceeds 95% of eligible scheduled cases, the remainder explained",
+      "status": "partial",
+      "evidence": "library holds 24 templates; the execution suite executes each through the fixture runner and asserts trigger plus nontrigger evidence per pair",
+      "gaps": [
+        "fixture scope only: no scheduled campaign has run, so coverage over eligible scheduled cases is unmeasured"
+      ]
+    },
+    {
+      "gate": "B3",
+      "requirement": "No known unsupported external path is represented as mediated",
+      "status": "partial",
+      "evidence": "adapter manifests must enumerate unsupported families, and capabilities plus unsupported paths must cover all nine fault families; the conformance suite rejects a silent family and a lying capability",
+      "gaps": [
+        "contract scope only: no deployed mediation surface exists to audit, so the product-wide claim is untested"
+      ]
+    },
+    {
+      "gate": "B4",
+      "requirement": "No successful hard-boundary bypass in a predeclared 10,000-case conformance/adversarial suite, plus independent review",
+      "status": "partial",
+      "evidence": "the automated half: TestExitGateAdversarialSweep runs 10,000 seeded cases (7,100 violations across 11 boundary categories, 2,900 controls) with zero allows on violations, plus the integration boundary tests",
+      "gaps": [
+        "no independent review has been performed"
+      ]
+    },
+    {
+      "gate": "B5",
+      "requirement": "On a held-out benign cohort of at least 1,000 sessions, the reference control profile's one-sided 95% upper bound for material false intervention is below 1%",
+      "status": "not met",
+      "evidence": "none",
+      "gaps": [
+        "no benign cohort exists: the bound calculator and its property tests exist in control-plane, but no sessions have run",
+        "requires a documented cohort with dependence assumptions before the number means anything"
+      ]
+    },
+    {
+      "gate": "B6",
+      "requirement": "Authorized task completion is no more than three percentage points below the hard-controls-only baseline on the specified solvable cohort, with paired uncertainty",
+      "status": "not met",
+      "evidence": "none",
+      "gaps": [
+        "no solvable cohort and no paired baseline runs exist",
+        "paired-uncertainty reporting is specified but unexercised"
+      ]
+    },
+    {
+      "gate": "B7",
+      "requirement": "All outage and dirty-cleanup cases fail safely under the stated supported model",
+      "status": "partial",
+      "evidence": "predeclared case list in release/exit_gate.py REQUIRED_CASES; sink failures, reviewer outages, capture failures, lease loss, expired grants, and dirty cleanup each hold or fence",
+      "gaps": [
+        "the hardened ephemeral execution backend is not implemented in this repository, so fail-safe behavior is verified on the local fixture model only"
+      ]
+    },
+    {
+      "gate": "B8",
+      "requirement": "Every serious finding has raw evidence and an independent outcome reference",
+      "status": "not met",
+      "evidence": "the plumbing is tested: portable reports must name their evidence chain and artifacts by digest, and outcome assertions come from outside the acting monitor",
+      "gaps": [
+        "no beta campaign has run, so no serious findings exist to audit; the gate cannot be met without real operations"
+      ]
+    },
+    {
+      "gate": "B9",
+      "requirement": "Latency, cost, privacy, and operator-control targets have actual benchmark reports",
+      "status": "partial",
+      "evidence": "benchmarks/report.json covers the measurable targets in-process with conditions and raw output",
+      "gaps": [
+        "areas without an honest number: ['Monitoring inference cost', 'Hosted service availability', 'Real workflow integration']",
+        "cost, privacy, and operator control have no benchmark surface yet; deployment-scale reports do not exist"
+      ]
+    },
+    {
+      "gate": "B10",
+      "requirement": "At least three design partners integrated, two intend to pay under a pilot agreement, and naming clearance is complete",
+      "status": "not met",
+      "evidence": "none",
+      "gaps": [
+        "no design partners have integrated a workflow",
+        "no pilot agreements exist",
+        "the AgentChaos name conflict (spec 23.3) is unresolved"
+      ]
+    }
+  ]
+}

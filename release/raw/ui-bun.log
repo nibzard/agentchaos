@@ -1,0 +1,7 @@
+$ bun test (in ui)
+bun test v1.3.9 (cf6cdbbb)
+
+ 184 pass
+ 0 fail
+ 880 expect() calls
+Ran 184 tests across 6 files. [38.00ms]

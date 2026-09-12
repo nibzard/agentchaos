@@ -1,0 +1,2 @@
+$ go test ./... (in supervisor)
+ok  	gauntlet/supervisor	(cached)
