@@ -135,6 +135,18 @@ storage reference, so the evidence still names what existed and
 `verify` still passes (spec 19). Inline and metadata-only payloads
 have nothing to delete.
 
+## Payload sealing at rest
+
+`WithPayloadSealer` seals the reader-facing copy of every event's
+payload content under a tenant-isolated encryption context (spec
+15.1, T038). The deployment injects the key custody service's
+`TenantSealer`; the recorder stays decoupled behind the
+`PayloadSealer` interface. Chain digests are computed over the
+original bytes before sealing, so `Verify` is unchanged. Reads open
+the content under the reading tenant's context; content that fails
+to open never reaches a reader, and a batch that cannot be sealed is
+refused whole — plaintext at rest is not a degradation path.
+
 ## Outcome verification
 
 The outcome verifier (spec 9.5) answers whether an effect landed, and

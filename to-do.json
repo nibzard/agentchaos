@@ -883,7 +883,7 @@
       "id": "T038",
       "title": "Implement credential and signing key management",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Use scoped service identities, short-lived credentials, tenant-isolated encryption contexts, signed scenario artifacts, and signed experiment grants.",
       "depends_on": [
         "T003",
@@ -894,6 +894,18 @@
       "tags": [
         "security",
         "identity"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z",
+      "files": [
+        "keycustody/go.mod",
+        "keycustody/service.go",
+        "keycustody/sealer.go",
+        "keycustody/keycustody_test.go",
+        "keycustody/README.md",
+        "evidence-plane/recorder.go",
+        "evidence-plane/sealer_test.go",
+        "evidence-plane/go.mod",
+        "evidence-plane/README.md"
       ]
     },
     {

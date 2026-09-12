@@ -162,6 +162,9 @@ type Recorder struct {
 	skewTolerance time.Duration
 	signingKey    ed25519.PrivateKey
 	keyID         string
+	// sealer encrypts payload content at rest under a tenant-isolated
+	// context (spec 15.1). Nil keeps content as it arrived.
+	sealer PayloadSealer
 
 	mu          sync.Mutex
 	tenants     map[string]*tenantStore
@@ -202,6 +205,27 @@ func WithSkewTolerance(d time.Duration) Option {
 
 // DefaultSkewTolerance bounds normal collector-to-recorder latency.
 const DefaultSkewTolerance = 10 * time.Minute
+
+// PayloadSealer encrypts payload content at rest under a
+// tenant-isolated context (spec 15.1, T038). The recorder seals the
+// reader-facing copy of every stored event's payload content and
+// opens it on read; the chain digests still bind the original bytes,
+// so sealing changes no verification. A sealer that fails closes the
+// store: plaintext at rest is not a degradation path.
+type PayloadSealer interface {
+	// SealPayload encrypts content for one tenant.
+	SealPayload(tenantID, plaintext string) (string, error)
+	// OpenPayload decrypts content for one tenant. Content sealed
+	// for another tenant must fail.
+	OpenPayload(tenantID, sealed string) (string, error)
+}
+
+// WithPayloadSealer seals payload content at rest. The sealer comes
+// from the key custody service (spec 5) and is injected by the
+// deployment, not chosen per tenant.
+func WithPayloadSealer(sealer PayloadSealer) Option {
+	return func(r *Recorder) { r.sealer = sealer }
+}
 
 // New builds a recorder with a fresh signing key for checkpoints.
 func New(opts ...Option) *Recorder {
@@ -351,6 +375,19 @@ func (r *Recorder) Ingest(principal *Principal, batch *Batch) (*IngestResult, er
 
 		stored.prev = store.chainHead
 		stored.digest = chainDigest(stored.event, store.chainHead)
+		// The reader-facing copy is the at-rest form: seal its payload
+		// content under the tenant's context after the chain digest
+		// bound the original bytes (spec 15.1). A seal failure refuses
+		// the batch — unsealed content at rest is not acceptable.
+		if r.sealer != nil && stored.live.Payload.Content != "" {
+			sealed, err := r.sealer.SealPayload(principal.TenantID, stored.live.Payload.Content)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"payload sealing failed for event %s; nothing was stored: %w",
+					event.ID, err)
+			}
+			stored.live.Payload.Content = sealed
+		}
 		store.chainHead = stored.digest
 		store.events = append(store.events, stored)
 		store.byID[event.ID] = stored
@@ -640,7 +677,19 @@ func (r *Recorder) Events(principal *Principal, query EventQuery) ([]*Event, err
 		if query.EffectID != "" && stored.live.EffectID != query.EffectID {
 			continue
 		}
-		out = append(out, CloneEvent(stored.live))
+		read := CloneEvent(stored.live)
+		// Sealed content opens under the reading tenant's context;
+		// content that fails to open never reaches a reader.
+		if r.sealer != nil && read.Payload.Content != "" {
+			opened, err := r.sealer.OpenPayload(principal.TenantID, read.Payload.Content)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"payload content of event %s failed to open under this tenant: %w",
+					read.ID, err)
+			}
+			read.Payload.Content = opened
+		}
+		out = append(out, read)
 	}
 	return out, nil
 }
