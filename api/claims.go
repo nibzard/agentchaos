@@ -4,32 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 
 	"gauntlet/control"
 )
 
-// claimStore holds computed assurance claims, tenant-scoped. A
-// cross-tenant claim read is indistinguishable from absence.
+// claimStore holds computed assurance claims, tenant-scoped, and owns
+// their freshness rules. A cross-tenant claim read is indistinguishable
+// from absence; a read after valid_until observes the claim STALE.
 type claimStore struct {
-	mu     sync.Mutex
-	claims map[string]*control.AssuranceClaim // tenant + "\x00" + id
+	registry *control.FreshnessRegistry
 }
 
 func newClaimStore() *claimStore {
-	return &claimStore{claims: map[string]*control.AssuranceClaim{}}
+	return &claimStore{registry: control.NewFreshnessRegistry()}
 }
 
 func (s *claimStore) put(tenantID string, claim *control.AssuranceClaim) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.claims[tenantID+"\x00"+claim.ID] = claim
+	s.registry.Put(tenantID, claim)
 }
 
 func (s *claimStore) get(tenantID, id string) *control.AssuranceClaim {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.claims[tenantID+"\x00"+id]
+	return s.registry.Claim(tenantID, id)
 }
 
 // claimRequest is the wire shape of a fixed-cohort assessment. The
@@ -276,4 +271,70 @@ func (s *Server) getClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, claim)
+}
+
+// invalidationRequest is the wire shape of a declared system change
+// (spec 14.7). The tenant comes from the authenticated principal.
+type invalidationRequest struct {
+	Kind          string `json:"kind"`
+	Component     string `json:"component"`
+	PreviousValue string `json:"previous_value"`
+	Detail        string `json:"detail"`
+	OccurredAt    string `json:"occurred_at"`
+}
+
+// invalidationKeyTree is the exact key set the route accepts. Anything
+// outside it fails closed (AC-001).
+var invalidationKeyTree = keyTree{
+	"kind": leaf, "component": leaf, "previous_value": leaf,
+	"detail": leaf, "occurred_at": leaf,
+}
+
+// invalidateClaims applies a declared system change to the tenant's
+// claims (spec 14.7, 18.2): affected claims are marked STALE, the
+// response names every affected and untouched claim with its reason,
+// and the relevant suites are scheduled. Reasons live in this record —
+// the claim contract has no field for them.
+func (s *Server) invalidateClaims(w http.ResponseWriter, r *http.Request) {
+	principal, requestID, ok := requireMutationPrincipal(w, r,
+		supervisorRoles, "invalidate assurance claims")
+	if !ok {
+		return
+	}
+	body, ok := readBody(w, requestID, r)
+	if !ok {
+		return
+	}
+	var probe map[string]any
+	if err := json.Unmarshal(body, &probe); err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "invalidation_schema",
+			"the invalidation request must be a JSON object", false)
+		return
+	}
+	if problems := checkKeys(probe, invalidationKeyTree, "$."); len(problems) > 0 {
+		writeProblem(w, requestID, http.StatusBadRequest, "invalidation_schema",
+			"the invalidation request violates its contract", false, problems...)
+		return
+	}
+	var request invalidationRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "invalidation_schema",
+			"the invalidation request violates its contract: "+err.Error(), false)
+		return
+	}
+
+	result, err := s.Claims.registry.Invalidate(principal.TenantID,
+		control.SystemChange{
+			Kind:          request.Kind,
+			Component:     request.Component,
+			PreviousValue: request.PreviousValue,
+			Detail:        request.Detail,
+			OccurredAt:    request.OccurredAt,
+		})
+	if err != nil {
+		writeProblem(w, requestID, http.StatusUnprocessableEntity,
+			"invalidation_refused", err.Error(), false)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }

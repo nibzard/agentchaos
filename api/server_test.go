@@ -718,6 +718,83 @@ func claimFixture() map[string]any {
 	}
 }
 
+func TestClaimInvalidationMarksAffectedClaimsStale(t *testing.T) {
+	env := newTestEnv(t)
+	request := claimFixture()
+	reply, claim := doJSON(t, "POST", env.api.URL+"/v1/assurance-claims",
+		mustBody(t, request), headers(RoleService, "idk_inval-claim-001"))
+	if reply.StatusCode != http.StatusCreated {
+		t.Fatalf("assess claim: %d %v", reply.StatusCode, claim)
+	}
+	claimID := claim["id"].(string)
+	digest := "sha256:" + strings.Repeat("a", 64)
+
+	invalidation := map[string]any{
+		"kind":           "model_identity_change",
+		"component":      "model",
+		"previous_value": digest,
+		"detail":         "serving weights replaced in canary",
+		"occurred_at":    "2026-09-12T10:00:00Z",
+	}
+	reply, result := doJSON(t, "POST",
+		env.api.URL+"/v1/assurance-claims/invalidations",
+		mustBody(t, invalidation), headers(RoleOperator, "idk_inval-000000001"))
+	if reply.StatusCode != http.StatusOK {
+		t.Fatalf("invalidate: %d %v", reply.StatusCode, result)
+	}
+	affected, _ := result["affected_claims"].([]any)
+	if len(affected) != 1 {
+		t.Fatalf("affected claims: %v", result["affected_claims"])
+	}
+	row, _ := affected[0].(map[string]any)
+	if row["claim_id"] != claimID || row["status_after"] != control.ClaimStale {
+		t.Fatalf("affected row: %v", row)
+	}
+	if row["reason"] == "" {
+		t.Fatal("an affected claim carries no reason")
+	}
+
+	// The stored claim reads STALE; its freshness block is unchanged.
+	reply, fetched := doJSON(t, "GET",
+		env.api.URL+"/v1/assurance-claims/"+claimID, nil, headers(RoleService, ""))
+	if reply.StatusCode != http.StatusOK || fetched["status"] != control.ClaimStale {
+		t.Fatalf("stale read: %d %v", reply.StatusCode, fetched["status"])
+	}
+
+	// A replay under the same idempotency key returns the same verdict.
+	reply, replay := doJSON(t, "POST",
+		env.api.URL+"/v1/assurance-claims/invalidations",
+		mustBody(t, invalidation), headers(RoleOperator, "idk_inval-000000001"))
+	if reply.StatusCode != http.StatusOK ||
+		fmt.Sprint(replay["affected_claims"]) != fmt.Sprint(result["affected_claims"]) {
+		t.Fatalf("replay: %d %v", reply.StatusCode, replay)
+	}
+
+	// Unknown fields and unknown triggers fail closed; workers cannot
+	// declare invalidations.
+	bad := map[string]any{"kind": "model_identity_change", "vibes": true}
+	reply, problem := doJSON(t, "POST",
+		env.api.URL+"/v1/assurance-claims/invalidations",
+		mustBody(t, bad), headers(RoleOperator, "idk_inval-unknown-f"))
+	if reply.StatusCode != http.StatusBadRequest || problem["code"] != "invalidation_schema" {
+		t.Fatalf("unknown field: %d %v", reply.StatusCode, problem)
+	}
+	reply, problem = doJSON(t, "POST",
+		env.api.URL+"/v1/assurance-claims/invalidations",
+		mustBody(t, map[string]any{"kind": "vibe_shift"}),
+		headers(RoleOperator, "idk_inval-bad-kind"))
+	if reply.StatusCode != http.StatusUnprocessableEntity ||
+		problem["code"] != "invalidation_refused" {
+		t.Fatalf("unknown trigger: %d %v", reply.StatusCode, problem)
+	}
+	reply, problem = doJSON(t, "POST",
+		env.api.URL+"/v1/assurance-claims/invalidations",
+		mustBody(t, invalidation), headers(RoleWorker, "idk_inval-worker-01"))
+	if reply.StatusCode != http.StatusForbidden || problem["code"] != "role_forbidden" {
+		t.Fatalf("worker role: %d %v", reply.StatusCode, problem)
+	}
+}
+
 func TestIdempotencyReplayAndConflict(t *testing.T) {
 	env := newTestEnv(t)
 	document := mustBody(t, draftExperiment(t))

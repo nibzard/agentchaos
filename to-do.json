@@ -640,7 +640,7 @@
       "id": "T023",
       "title": "Implement claim freshness invalidation",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Mark affected assurance claims stale when model identity, prompt, policy, tools, topology, isolation tests, drift, or telemetry gaps change.",
       "depends_on": [
         "T022"
@@ -648,7 +648,16 @@
       "tags": [
         "assurance",
         "versioning"
-      ]
+      ],
+      "files": [
+        "control-plane/freshness.go",
+        "control-plane/freshness_test.go",
+        "api/claims.go",
+        "api/server.go",
+        "api/server_test.go",
+        "control-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T024",

@@ -210,6 +210,42 @@ The emitted document validates against the shared AssuranceClaim
 contract, and the bounds match `scipy.stats.beta.ppf` (the published
 Clopper-Pearson bound) in a test that skips when scipy is absent.
 
+## Claim freshness
+
+`FreshnessRegistry` (spec 14.7) applies the invalidation triggers a
+claim declares. A `SystemChange` names its trigger kind, the
+fingerprint component it touched, and the previous value it replaced:
+
+| Trigger kind | Default component |
+| --- | --- |
+| `model_identity_change` | `model` |
+| `prompt_change` | `harness` |
+| `policy_change` | `policy` |
+| `tool_change` | `tools` |
+| `topology_change` | `environment` |
+| `distribution_drift` | `scenario_distribution` |
+| `telemetry_gap` | `monitor` |
+| `isolation_test_failure` | `*` (every scope) |
+
+A claim is affected when it declared the kind and the change touches
+its scope: the named component still binds `previous_value`, or the
+previous value was unstated — which fails closed and matches every
+claim in scope. A claim already binding the new value stays fresh.
+Affected claims become `STALE`; untouched claims are listed by id in
+the `InvalidationResult`, because silence about scope is not an
+outcome. One re-evaluation `SuiteSchedule` is kept per affected
+workload and autonomy profile.
+
+Stale reasons live in the invalidation records, never in the claim:
+the shared contract's freshness block allows only `valid_until` and
+`invalidation_triggers`. Expiry works the same way, lazily — the first
+read after `valid_until` returns `STALE`, records an audit row, and
+schedules the suite. A `valid_until` that cannot be parsed has already
+elapsed: freshness is proven, never assumed.
+
+The API exposes this as `POST /v1/assurance-claims/invalidations`
+(spec 18.2); `GET /v1/assurance-claims/{id}` shows the stale status.
+
 ## Tests
 
 ```bash

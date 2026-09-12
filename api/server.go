@@ -86,6 +86,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/assurance-claims",
 		s.withIdempotency(supervisorRoles, "assess an assurance claim", s.assessClaim))
 	mux.HandleFunc("GET /v1/assurance-claims/{id}", s.getClaim)
+	mux.HandleFunc("POST /v1/assurance-claims/invalidations",
+		s.withIdempotency(supervisorRoles, "invalidate assurance claims",
+			s.invalidateClaims))
 	mux.HandleFunc("POST /v1/safety-levers/{scope}/engage",
 		s.withIdempotency(leverRoles, "engage a safety lever", s.engageSafetyLever))
 
