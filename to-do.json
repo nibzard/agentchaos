@@ -1321,7 +1321,7 @@
       "id": "T049",
       "title": "Implement synthetic production mode",
       "priority": 4,
-      "status": "todo",
+      "status": "done",
       "details": "Run enrolled synthetic identities through production-path infrastructure after isolated and integration gates pass, with independent kill and cleanup gates.",
       "depends_on": [
         "T009",
@@ -1332,7 +1332,14 @@
       "tags": [
         "p1",
         "production-synthetic"
-      ]
+      ],
+      "files": [
+        "execution-plane/gauntlet_scenarios/production.py",
+        "execution-plane/gauntlet_scenarios/__init__.py",
+        "execution-plane/tests/test_production_mode.py",
+        "execution-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T050",

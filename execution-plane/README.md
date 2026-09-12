@@ -198,6 +198,46 @@ statistical sample size (spec 12).
 The executor records every injected fault file (`fault_targets`), which
 is what the lifecycle's cleanup verifier walks after the pair.
 
+## Production synthetic mode
+
+`gauntlet_scenarios.production` is the P1 operating mode (T049, spec 7
+and 13.4, AC-031): enrolled synthetic sessions through production-path
+services, only after the isolated and integration gates pass. The
+spec's five admission requirements — verified enrollment, an
+independent kill path, cost limits, known effect sinks, and cleanup
+evidence — are checked at admission with the whole problem list, and
+again immediately before every single injection:
+
+- **Enrollment.** `Enrollment` holds dedicated `syn_` identities and
+  explicit targets. Wildcard and unknown-scheme destinations are
+  refused. A target revoked after admission blocks the next injection.
+- **Gates.** The scenario must be `released`, its
+  `production_synthetic` classification valid for the target class and
+  primitive version, the fault kind registered in the primitive
+  registry, and integration evidence bound to the workload
+  fingerprint and passed.
+- **Cost.** Sessions carry bounded injection and effect budgets, and
+  the identity's own budget caps the session.
+- **Kill.** `mode.kill` actuates a kill path outside every session's
+  call stack. The session is never called, so an unreachable session
+  cannot prevent its own stop.
+- **Cleanup.** `stop` drains what compensation can undo, quarantines
+  the rest, and an independent verifier walks the path's own records.
+  Terminal states are `CLEAN`, `DIRTY_QUARANTINED`, and `UNKNOWN`; a
+  late effect reopens the result.
+
+`assess` runs the three AC-031 gates — isolation, kill, cleanup — and
+`passed` means all three. `separate_statistics` keeps synthetic
+sessions out of ordinary customer outcome statistics and reports them
+as shared-resource impact; a synthetic session inside a customer
+population is refused.
+
+Honest scope: the production path here is a recording stand-in. No
+production-path service exists in this repository. The deliverable is
+the admission contract, the per-injection re-checks, the independent
+kill, the cleanup verdicts, and the statistical separation — the parts
+a real path plugs into.
+
 ## Fault adapters and conformance
 
 `gauntlet_adapters` is the adapter interface and its conformance suite
