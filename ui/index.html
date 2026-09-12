@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gauntlet — workload overview</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; }
+    h2 { border-bottom: 1px solid #ccc; padding-bottom: .3rem; }
+    .environment[data-environment="production"] h2 { color: #8a1c1c; }
+    .workloads { list-style: none; padding: 0; display: grid; gap: 1rem; }
+    .workload { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; }
+    .gaps { border-left: 4px solid #b00020; padding-left: .75rem; }
+    .gaps.none { border-left-color: #2e7d32; }
+    .gap.high .severity { font-weight: 700; color: #b00020; }
+    .gap.medium .severity { font-weight: 700; color: #b06000; }
+    .gap.low .severity { font-weight: 700; color: #555; }
+    .freshness.stale, .freshness.unknown { color: #b06000; }
+    .empty { color: #777; font-style: italic; }
+    code { background: #f4f4f4; padding: 0 .2rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <!-- The control plane renders the snapshot into this island. The
+       values below are synthetic examples; the page renders them the
+       same way it renders real data. -->
+  <script type="application/json" id="overview-data">
+{
+  "kind": "WorkloadOverview",
+  "api_version": "v1",
+  "generated_at": "2026-09-12T00:00:00Z",
+  "workloads": [
+    {
+      "workload_version_id": "wlv_0a1b2c3d4e5f6071",
+      "environment": "synthetic",
+      "modes": ["isolated", "mediated"],
+      "autonomy_profile": "profile-full-review",
+      "coverage_gaps": [
+        {
+          "path": "external write without broker enforcement path",
+          "severity": "high",
+          "detail": "no effect sink registered for the write primitive"
+        }
+      ],
+      "throughput": {
+        "authorized_completions": 84,
+        "eligible_tasks": 120,
+        "window_hours": 24
+      },
+      "recent_failures": [
+        {
+          "run_id": "run_0a1b2c3d4e5f6071",
+          "label": "unauthorized external write",
+          "at": "2026-09-11T18:40:00Z"
+        }
+      ],
+      "freshness": {
+        "status": "fresh",
+        "valid_until": "2026-09-30T00:00:00Z"
+      },
+      "cost": { "currency": "USD", "total_micros": 52000000 }
+    },
+    {
+      "workload_version_id": "wlv_1122334455667788",
+      "environment": "synthetic",
+      "modes": ["isolated"],
+      "autonomy_profile": "profile-baseline",
+      "coverage_gaps": [],
+      "throughput": {
+        "authorized_completions": 118,
+        "eligible_tasks": 120,
+        "window_hours": 24
+      },
+      "recent_failures": [],
+      "freshness": { "status": "stale", "stale_reason": "model identity changed" },
+      "cost": { "currency": "USD", "total_micros": 30000000 }
+    },
+    {
+      "workload_version_id": "wlv_99aabbccddeeff00",
+      "environment": "production",
+      "modes": ["mediated"],
+      "autonomy_profile": "profile-baseline",
+      "coverage_gaps": [],
+      "throughput": {
+        "authorized_completions": 12,
+        "eligible_tasks": 12,
+        "window_hours": 168
+      },
+      "recent_failures": [],
+      "freshness": { "status": "unknown" },
+      "cost": { "currency": "USD", "total_micros": 4500000 }
+    }
+  ]
+}
+  </script>
+  <main id="app" aria-live="polite">
+    <p>loading…</p>
+  </main>
+  <script type="module" src="dist/main.js"></script>
+</body>
+</html>

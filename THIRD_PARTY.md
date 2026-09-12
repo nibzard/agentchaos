@@ -11,6 +11,9 @@ None. Every component ships against a standard library only:
   library and each other. `go.mod` carries no third-party requires.
 - The Python packages (`acx_compiler`, `acx_runner`, `acx_schemas`)
   import the Python standard library only.
+- The TypeScript UI (`ui/`) uses the Web platform and DOM standard
+  APIs only. `package.json` declares no dependencies; the bundle
+  imports no library code.
 
 ## Development dependencies
 
@@ -18,6 +21,9 @@ None. Every component ships against a standard library only:
   `jsonschema` on PyPI) validates this repository's own contract
   schemas and the task tracker during development and review. It is not
   imported by any shipped component.
+- Bun (MIT license, `bun.sh`) runs the UI test suite and bundles the
+  browser entry during development. No Bun code or runtime ships with
+  the UI, and the tests do not import Bun APIs.
 
 ## Same-name repository
 

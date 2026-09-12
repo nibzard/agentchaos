@@ -830,7 +830,7 @@
       "id": "T031",
       "title": "Build the workload overview UI",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Show workload versions, supported modes, coverage gaps, autonomy profile, throughput, failures, freshness, and cost.",
       "depends_on": [
         "T026"
@@ -838,7 +838,19 @@
       "tags": [
         "ui",
         "dashboard"
-      ]
+      ],
+      "files": [
+        "ui/package.json",
+        "ui/tsconfig.json",
+        "ui/.gitignore",
+        "ui/index.html",
+        "ui/src/overview.ts",
+        "ui/src/main.ts",
+        "ui/src/overview.test.ts",
+        "ui/README.md",
+        "THIRD_PARTY.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T032",

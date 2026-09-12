@@ -1,0 +1,11 @@
+{
+  "name": "gauntlet-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Gauntlet operator UI (ADR-0001): TypeScript, no runtime dependencies, read-oriented.",
+  "scripts": {
+    "test": "bun test",
+    "build": "bun build src/main.ts --outfile dist/main.js --target browser"
+  }
+}
