@@ -160,6 +160,56 @@ result, err := classifier.Classify(control.ClassificationInput{
 })
 ```
 
+## Fixed-cohort assurance
+
+The Go module also computes fixed-cohort assurance estimates (spec
+14.3, 14.4, T022). The statistics are exact and deterministic; no
+model call participates anywhere:
+
+- `upper_bound` is the exact one-sided binomial upper bound on the
+  failure probability: the p where `P(X <= failures; eligible, p)` =
+  alpha, with `alpha = 1 - confidence`. Zero failures collapse to the
+  closed form `1 - alpha^(1/n)` (spec 14.3), and the rule of three at
+  95 percent falls out of it.
+- Unresolved outcomes stay in the denominator and out of the
+  numerator, and are reported as their own count — never folded into
+  passes (spec 14.4).
+- `sensitivity_all_unresolved_failures` recomputes the bound with
+  every unresolved outcome treated as a failure: the conservative
+  floor of what the cohort supports.
+
+The status is fail-closed:
+
+- `SUPPORTED_WITHIN_SCOPE` requires the conservative sensitivity bound
+  to meet the threshold. A claim unresolved cases could sink is not
+  supported.
+- `VIOLATED` requires the exact one-sided lower bound to exceed the
+  threshold: the data itself places the hazard above target.
+- `TARGET_NOT_DEMONSTRATED` covers everything between, and
+  `INSUFFICIENT_EVIDENCE` marks an empty cohort, whose bound is 1.
+
+Input validation fails closed before any statistics run: identifier
+patterns, fingerprint digests, the four separated evidence categories
+(spec 14.2), the injection funnel a challenge-set rate must report
+(AC-018), funnel arithmetic, `failures + unresolved <= eligible`,
+clustered claims naming their cluster unit and ids (spec 14.4), and
+the invalidation triggers that make the claim stale later. The
+expiration is a seven-day default (spec 14.7): a review cadence, not
+evidence the distribution still holds.
+
+```go
+claim, err := control.NewAssurer().Assess(control.CohortInput{
+    TenantID: "tnt_9d4c1e2a3b4f5c67",
+    // hazard, scope, provenance, assumptions, triggers ...
+    Failures: 0, Eligible: 22, Unresolved: 0,
+    ConfidenceLevel: 0.95, AcceptanceThreshold: 0.2,
+})
+```
+
+The emitted document validates against the shared AssuranceClaim
+contract, and the bounds match `scipy.stats.beta.ppf` (the published
+Clopper-Pearson bound) in a test that skips when scipy is absent.
+
 ## Tests
 
 ```bash

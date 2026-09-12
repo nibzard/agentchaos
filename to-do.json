@@ -575,7 +575,7 @@
       "id": "T022",
       "title": "Implement fixed-cohort assurance calculations",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Calculate exact one-sided binomial upper bounds for fixed cohorts. Report failures, eligible observations, unresolved outcomes, confidence level, assumptions, and expiration.",
       "depends_on": [
         "T014"
@@ -583,7 +583,13 @@
       "tags": [
         "statistics",
         "assurance"
-      ]
+      ],
+      "files": [
+        "control-plane/assurance.go",
+        "control-plane/assurance_test.go",
+        "control-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T11:30:00Z"
     },
     {
       "id": "T023",
