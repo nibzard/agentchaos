@@ -1047,7 +1047,7 @@
       "id": "T040",
       "title": "Add unit and property tests for core logic",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Test parsers, authorization, accounting, statistics, capability attenuation, and state transitions.",
       "depends_on": [
         "T003",
@@ -1059,7 +1059,14 @@
       "tags": [
         "tests",
         "quality"
-      ]
+      ],
+      "files": [
+        "broker/property_test.go",
+        "analysis/property_test.go",
+        "control-plane/property_test.go",
+        "control-plane/tests/test_canonical_property.py"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T041",
