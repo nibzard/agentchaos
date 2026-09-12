@@ -550,7 +550,7 @@
       "id": "T019",
       "title": "Implement final session review",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Run structured checks over complete event sequences. Mark sessions incomplete when logs exceed review budgets or required evidence is missing.",
       "depends_on": [
         "T011",
@@ -559,6 +559,12 @@
       "tags": [
         "supervision",
         "review"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z",
+      "files": [
+        "supervisor/session.go",
+        "supervisor/session_test.go",
+        "supervisor/README.md"
       ]
     },
     {

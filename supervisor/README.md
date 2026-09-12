@@ -8,6 +8,30 @@ this module can widen what the gate allows, and every decision it
 produces attaches through `AttachReview`, subject to the broker's
 review decision contract.
 
+## Layer 4: the session reviewer
+
+`SessionReviewer` (T019, spec 11.3) runs structured checks over one
+session's complete event sequence and returns a `SessionReport`:
+
+- Coverage checks: every proposed action has a broker decision, every
+  allowed effect has an external receipt, every tool request has its
+  response, and collector heartbeats exist.
+- Trajectory check: the fast detector with a whole-session window
+  finds patterns a bounded window can miss, such as a denied retry
+  hours apart.
+- Disclosures: omitted payloads, truncation, and delayed events are
+  counted and sampled from the record itself.
+- Bounded segments: long logs are summarized in bounded segments that
+  keep references and open questions; the raw windows stay in the
+  evidence store.
+
+The outcome is `reviewed` or `incomplete`, never clean-by-silence
+(AC-016). A session is incomplete when its log exceeds the review
+budget (`SegmentSize * MaxSegments`), when required evidence is
+missing, or when the log is empty. Every report carries the
+unconditional limitation: processing a session log is not proof that
+every behavior was understood.
+
 ## Layer 2: the fast detector
 
 `FastDetector.Detect` scans the most recent events of one run — the
