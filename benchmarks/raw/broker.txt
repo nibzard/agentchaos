@@ -1,0 +1,10 @@
+goos: linux
+goarch: amd64
+pkg: gauntlet/broker
+cpu: 12th Gen Intel(R) Core(TM) i9-12900HK
+BenchmarkDeterministicGateLatency-4      	    2000	     64846 ns/op	         0.04778 gate-p50-ms	         0.1133 gate-p95-ms	         0.4021 gate-p99-ms
+BenchmarkAuthorizeDecisionThroughput-4   	    2000	     64905 ns/op
+BenchmarkExpiredGrantDecision-4          	    2000	     34697 ns/op
+PASS
+ok  	gauntlet/broker	0.362s
+?   	gauntlet/broker/cmd/brokerd	[no test files]

@@ -1,0 +1,24 @@
+{
+  "kind": "RunnerOverheadBenchmark",
+  "overhead": {
+    "workload_seconds_per_variant": 0.5,
+    "scenario_count": 3,
+    "repetitions": 5,
+    "overhead_seconds_median": 0.003519035002682358,
+    "overhead_seconds_min": 0.0030848889728076756,
+    "overhead_seconds_max": 0.00445838802261278,
+    "overhead_samples": [
+      0.003963656025007367,
+      0.00445838802261278,
+      0.003519035002682358,
+      0.0030848889728076756,
+      0.0034384889877401292
+    ],
+    "overhead_share_median": 0.001173011667560786,
+    "machine_note": "single machine, local filesystem, no network services, simulated workload time excluded from the overhead"
+  },
+  "environment": {
+    "environment_lifecycle_seconds": 0.00022750801872462034,
+    "machine_note": "local filesystem only; the beta first-fixture target also includes tool installation and account provisioning, which this does not measure"
+  }
+}

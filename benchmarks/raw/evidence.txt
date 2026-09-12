@@ -1,0 +1,8 @@
+goos: linux
+goarch: amd64
+pkg: gauntlet/evidence
+cpu: 12th Gen Intel(R) Core(TM) i9-12900HK
+BenchmarkIngestMetadataEvents-4   	     100	   1381007 ns/op	     72411 events/sec
+PASS
+ok  	gauntlet/evidence	0.146s
+?   	gauntlet/evidence/cmd/evid	[no test files]

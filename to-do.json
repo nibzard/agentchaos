@@ -1132,7 +1132,7 @@
       "id": "T043",
       "title": "Create benchmark reports for beta targets",
       "priority": 3,
-      "status": "todo",
+      "status": "done",
       "details": "Measure deterministic gate latency, reviewer deadlines, overhead, monitoring cost, event ingest, broker throughput, grant expiry, fencing acknowledgment, durability, setup time, and integration time.",
       "depends_on": [
         "T005",
@@ -1145,7 +1145,20 @@
       "tags": [
         "benchmarks",
         "operations"
-      ]
+      ],
+      "files": [
+        "broker/bench_test.go",
+        "evidence-plane/bench_test.go",
+        "supervisor/bench_test.go",
+        "governor/bench_test.go",
+        "execution-plane/benchmarks/runner_overhead.py",
+        "benchmarks/run.sh",
+        "benchmarks/collate.py",
+        "benchmarks/README.md",
+        "benchmarks/report.md",
+        "benchmarks/report.json"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T044",

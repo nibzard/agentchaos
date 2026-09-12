@@ -1,0 +1,101 @@
+{
+  "kind": "BenchmarkReport",
+  "api_version": "v1",
+  "generated_at": "2026-09-12T15:31:54Z",
+  "statement": "In-process measurements from one development machine. They exercise the real code paths but do not reproduce the beta measurement conditions (reference deployments, network services, live models), and they certify nothing.",
+  "benchmarks_run": [
+    "BenchmarkAuthorizeDecisionThroughput",
+    "BenchmarkDeadlineFallbackEnforcement",
+    "BenchmarkDeterministicGateLatency",
+    "BenchmarkEmergencyStopAcknowledgment",
+    "BenchmarkExpiredGrantDecision",
+    "BenchmarkIngestMetadataEvents",
+    "BenchmarkReferenceReviewDecision"
+  ],
+  "rows": [
+    {
+      "area": "Local deterministic gate",
+      "target": "p95 added latency <= 10 ms",
+      "measured": "p95 0.113 ms (p50 0.048 ms, p99 0.402 ms)",
+      "condition": "in-process authorize path, single machine, bounded policy set, no network",
+      "status": "measured"
+    },
+    {
+      "area": "Context reviewer deadline",
+      "target": "default 3 s decision deadline; on expiry the profile fallback holds, never a silent allow",
+      "measured": "default deadline 3 s; every timed-out decision fell back to hold (zero silent allows in benchmark)",
+      "condition": "in-process DeadlineReviewer over a reviewer slower than the deadline; model latency itself not measured",
+      "status": "measured (enforcement, not model latency)"
+    },
+    {
+      "area": "End-to-end overhead",
+      "target": "median added wall time <= 15%",
+      "measured": "median 3.5 ms added per 3-pair run (0.12% of simulated wall time)",
+      "condition": "simulated 0.5 s variants, local filesystem, no network; the beta condition is tasks >= 30 s, which this bench does not reach",
+      "status": "measured at short durations"
+    },
+    {
+      "area": "Monitoring inference cost",
+      "target": "median <= 20% of worker inference cost",
+      "measured": "not measured: needs live model calls on both sides; deterministic review tier measured at 383730 decisions/second",
+      "condition": "requires a reference workload with real inference",
+      "status": "not measured"
+    },
+    {
+      "area": "Event ingest",
+      "target": "5,000 metadata events/second",
+      "measured": "72411 events/second",
+      "condition": "in-process recorder ingest, 1 KB inline events, batches of 100, single stream, no HTTP, one machine",
+      "status": "measured (library, not the service)"
+    },
+    {
+      "area": "Broker throughput",
+      "target": "500 deterministic decisions/second",
+      "measured": "15407 decisions/second",
+      "condition": "in-process authorize path, single machine, bounded policy set, no HTTP",
+      "status": "measured (library, not the service)"
+    },
+    {
+      "area": "Safety grant expiry",
+      "target": "10 s lease; nothing accepted after expiry",
+      "measured": "expired-grant denial path 34.7 us per decision, same order as the allow path; refusal enforcement covered by the broker test suite",
+      "condition": "in-process authorize against an expired grant",
+      "status": "measured (enforcement)"
+    },
+    {
+      "area": "Fencing acknowledgment",
+      "target": "p99 <= 2 s for the enrolled broker",
+      "measured": "p99 0.02 ms (p50 0.02 ms) from trip to observable fenced state",
+      "condition": "in-process emergency stop over two live runs, state read included; no network",
+      "status": "measured"
+    },
+    {
+      "area": "Evidence durability",
+      "target": "intent durable before dispatch",
+      "measured": "behavior, not latency: the evidence fence holds new external effects while capture is down; covered by the broker gate tests",
+      "condition": "broker test suite (gate behavior)",
+      "status": "covered by tests"
+    },
+    {
+      "area": "Hosted service availability",
+      "target": "99.9% monthly design objective",
+      "measured": "not measured: no hosted deployment exists",
+      "condition": "requires a running deployment and a month",
+      "status": "not measured"
+    },
+    {
+      "area": "First fixture result",
+      "target": "under 30 minutes",
+      "measured": "automated environment lifecycle 0.2 ms",
+      "condition": "local filesystem only; tool installation and account provisioning are not measured",
+      "status": "partial"
+    },
+    {
+      "area": "Real workflow integration",
+      "target": "under one engineer-day",
+      "measured": "not measured: no partner integration exists yet",
+      "condition": "requires a supported broker/harness path and an enrolled environment",
+      "status": "not measured"
+    }
+  ]
+}

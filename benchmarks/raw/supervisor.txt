@@ -1,0 +1,8 @@
+goos: linux
+goarch: amd64
+pkg: gauntlet/supervisor
+cpu: 12th Gen Intel(R) Core(TM) i9-12900HK
+BenchmarkReferenceReviewDecision-4       	      50	      2606 ns/op
+BenchmarkDeadlineFallbackEnforcement-4   	      50	   5373160 ns/op	         3.000 default-deadline-s
+PASS
+ok  	gauntlet/supervisor	0.296s

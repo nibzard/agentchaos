@@ -1,0 +1,8 @@
+goos: linux
+goarch: amd64
+pkg: gauntlet/governor
+cpu: 12th Gen Intel(R) Core(TM) i9-12900HK
+BenchmarkEmergencyStopAcknowledgment-4   	      20	     17047 ns/op	         0.01550 fence-p50-ms	         0.02320 fence-p99-ms
+PASS
+ok  	gauntlet/governor	0.010s
+?   	gauntlet/governor/cmd/governord	[no test files]
