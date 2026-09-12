@@ -154,7 +154,7 @@
       "id": "T005",
       "title": "Implement the local fixture runner",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Run baseline and treatment variants in fresh disposable environments and export paired results with workload fingerprints.",
       "depends_on": [
         "T003"
@@ -162,6 +162,23 @@
       "tags": [
         "runner",
         "fixtures"
+      ],
+      "updated_at": "2026-09-12T02:35:00Z",
+      "files": [
+        "execution-plane/pyproject.toml",
+        "execution-plane/README.md",
+        "execution-plane/.gitignore",
+        "execution-plane/acx_runner/__init__.py",
+        "execution-plane/acx_runner/environments.py",
+        "execution-plane/acx_runner/ids.py",
+        "execution-plane/acx_runner/patterns.py",
+        "execution-plane/acx_runner/outcomes.py",
+        "execution-plane/acx_runner/runner.py",
+        "execution-plane/acx_runner/export.py",
+        "execution-plane/tests/conftest.py",
+        "execution-plane/tests/test_environments.py",
+        "execution-plane/tests/test_outcomes.py",
+        "execution-plane/tests/test_runner.py"
       ]
     },
     {
