@@ -347,7 +347,7 @@
       "id": "T011",
       "title": "Implement authoritative evidence collection",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Collect worker claims, broker decisions, external receipts, injection receipts, collector heartbeats, monitor interpretations, and recovery actions as separate trust-labeled records.",
       "depends_on": [
         "T002",
@@ -356,7 +356,18 @@
       "tags": [
         "evidence",
         "storage"
-      ]
+      ],
+      "files": [
+        "evidence-plane/go.mod",
+        "evidence-plane/contract.go",
+        "evidence-plane/recorder.go",
+        "evidence-plane/server.go",
+        "evidence-plane/contract_test.go",
+        "evidence-plane/evidence_test.go",
+        "evidence-plane/cmd/evid/main.go",
+        "evidence-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T12:50:00Z"
     },
     {
       "id": "T012",
