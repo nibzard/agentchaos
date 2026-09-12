@@ -8,7 +8,7 @@
   "description": "Headless repository-maintenance agent over a disposable checkout.",
   "fingerprint": "sha256:134c2b3cd224f1657552d671114d1d4a86180c5a9cf76c1f8e54fdbc8970f4fd",
   "harness": {
-    "name": "acx-harness",
+    "name": "gauntlet-harness",
     "version": "0.4.1",
     "digest": "sha256:c94a078591d72beb251768a2bb1260612f788856a818a325f4272d0cd1495715"
   },

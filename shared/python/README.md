@@ -1,4 +1,4 @@
-# acx-schemas
+# gauntlet-schemas
 
 Strict contract schemas and a fail-closed validator for Gauntlet
 resources.
@@ -17,7 +17,7 @@ pytest
 Usage:
 
 ```python
-from acx_schemas import validate
+from gauntlet_schemas import validate
 
 validate(instance, "Effect")  # raises ContractViolation on any mismatch
 ```

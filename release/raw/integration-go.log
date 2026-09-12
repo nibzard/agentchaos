@@ -1,2 +1,2 @@
 $ go test ./... (in integration)
-ok  	gauntlet/integration	0.035s
+ok  	gauntlet/integration	(cached)

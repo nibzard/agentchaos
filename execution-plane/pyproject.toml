@@ -1,5 +1,5 @@
 [project]
-name = "acx-runner"
+name = "gauntlet-runner"
 version = "0.1.0"
 description = "Local fixture runner and scenario library for Gauntlet experiments"
 requires-python = ">=3.11"
@@ -13,4 +13,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["acx_runner*", "acx_scenarios*", "acx_adapters*"]
+include = ["gauntlet_runner*", "gauntlet_scenarios*", "gauntlet_adapters*"]

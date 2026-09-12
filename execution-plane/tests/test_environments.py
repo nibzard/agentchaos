@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_runner import Environment, InstallError, LocalFixtureEnvironments
+from gauntlet_runner import Environment, InstallError, LocalFixtureEnvironments
 
 
 def _environments(tmp_path):

@@ -40,15 +40,15 @@ PROMISED_IDS = {
 # component, checked as a file that must exist in the built tree.
 PROMISED_MARKERS = {
     "scenario-specification":
-        "execution-plane/acx_scenarios/templates.py",
+        "execution-plane/gauntlet_scenarios/templates.py",
     "schemas": "shared/schemas/effect.schema.json",
-    "cli": "cli/acx/main.go",
-    "local-runner": "execution-plane/acx_runner/runner.py",
+    "cli": "cli/gauntlet/main.go",
+    "local-runner": "execution-plane/gauntlet_runner/runner.py",
     "reference-fixture-environments":
-        "execution-plane/acx_runner/environments.py",
+        "execution-plane/gauntlet_runner/environments.py",
     "synthetic-scenario-pack":
-        "execution-plane/acx_scenarios/templates.py",
-    "adapter-interface": "execution-plane/acx_adapters/contract.py",
+        "execution-plane/gauntlet_scenarios/templates.py",
+    "adapter-interface": "execution-plane/gauntlet_adapters/contract.py",
     "core-evidence-format": "evidence-plane/contract.go",
     "comparison-and-statistics": "control-plane/assurance.go",
     "local-ui": "ui/src/main.ts",

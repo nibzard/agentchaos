@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from acx_runner.runner import PairedRun, utc_now
+from gauntlet_runner.runner import PairedRun, utc_now
 
 
 def build_export(

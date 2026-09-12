@@ -142,7 +142,7 @@ func TestTenantSealerIsolatesContexts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(sealed, "acxseal.") {
+	if !strings.HasPrefix(sealed, "gauntletseal.") {
 		t.Fatalf("sealed form: %s", sealed)
 	}
 	if strings.Contains(sealed, secret) {

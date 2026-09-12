@@ -20,13 +20,13 @@ import re
 import tempfile
 from pathlib import Path
 
-from acx_adapters.adapter import (
+from gauntlet_adapters.adapter import (
     AdapterRefusal,
     FaultAdapter,
     fresh_workspace,
     workspace_tree,
 )
-from acx_adapters.contract import REQUIRED_RECEIPT_FIELDS, validate_manifest
+from gauntlet_adapters.contract import REQUIRED_RECEIPT_FIELDS, validate_manifest
 
 EVIDENCE_EVENT_ID = re.compile(r"^evt_[a-z0-9]{8,64}$")
 

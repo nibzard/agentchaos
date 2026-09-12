@@ -1,4 +1,4 @@
-// Package app is the acx CLI (spec 17.7 / T029): validate, run,
+// Package app is the gauntlet CLI (spec 17.7 / T029): validate, run,
 // compare, inspect, stop, report, and assurance explain, with stable
 // automation exit codes. Exit 0 means the requested operation
 // completed and its explicit gate passed — never a claim of universal
@@ -28,9 +28,9 @@ const (
 	ExitInfra        = 5 // harness or infrastructure failure
 )
 
-const usage = `acx — AgentChaos operator CLI
+const usage = `gauntlet — AgentChaos operator CLI
 
-usage: acx [--api URL] [--token TOKEN] COMMAND [args]
+usage: gauntlet [--api URL] [--token TOKEN] COMMAND [args]
 
 commands:
   validate MANIFEST [--records FILE]      store a draft, optionally compile
@@ -42,7 +42,7 @@ commands:
   report RUN_ID [--format text|json]      run report
   assurance explain CLAIM_ID              render the evidence card
 
-environment: ACX_API and ACX_TOKEN override --api and --token.
+environment: GAUNTLET_API and GAUNTLET_TOKEN override --api and --token.
 
 exit codes: 0 gate passed; 2 gate failed; 3 inconclusive;
 4 invalid configuration; 5 harness or infrastructure failure.
@@ -68,13 +68,13 @@ type options struct {
 // given writers so tests stay hermetic.
 func Main(args []string, out, errOut io.Writer) int {
 	options := &options{reason: "operator_request", format: "text"}
-	options.api = os.Getenv("ACX_API")
-	options.token = os.Getenv("ACX_TOKEN")
+	options.api = os.Getenv("GAUNTLET_API")
+	options.token = os.Getenv("GAUNTLET_TOKEN")
 	if options.api == "" {
 		options.api = "http://localhost:8080"
 	}
 	if err := options.parse(args); err != nil {
-		fmt.Fprintln(errOut, "acx: "+err.Error())
+		fmt.Fprintln(errOut, "gauntlet: "+err.Error())
 		fmt.Fprint(errOut, usage)
 		return ExitConfig
 	}
@@ -104,7 +104,7 @@ func Main(args []string, out, errOut io.Writer) int {
 	case "assurance":
 		return ctx.assurance(operands)
 	default:
-		fmt.Fprintf(errOut, "acx: unknown command %q\n", command)
+		fmt.Fprintf(errOut, "gauntlet: unknown command %q\n", command)
 		fmt.Fprint(errOut, usage)
 		return ExitConfig
 	}
@@ -239,11 +239,11 @@ func (c *client) do(method, path string, body []byte) (*reply, error) {
 // Everything else the caller did wrong is configuration (4).
 func (ctx *context) mapFailure(label string, response *reply, err error) int {
 	if err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: %s: %v\n", label, err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: %s: %v\n", label, err)
 		return ExitInfra
 	}
 	if response.status >= 500 {
-		fmt.Fprintf(ctx.errOut, "acx: %s: server error %d\n", label,
+		fmt.Fprintf(ctx.errOut, "gauntlet: %s: server error %d\n", label,
 			response.status)
 		return ExitInfra
 	}
@@ -251,11 +251,11 @@ func (ctx *context) mapFailure(label string, response *reply, err error) int {
 	_ = json.Unmarshal(response.body, &decoded)
 	if response.status == http.StatusUnauthorized ||
 		response.status == http.StatusForbidden {
-		fmt.Fprintf(ctx.errOut, "acx: %s: %s (%s, request %s)\n", label,
+		fmt.Fprintf(ctx.errOut, "gauntlet: %s: %s (%s, request %s)\n", label,
 			decoded.Message, decoded.Code, decoded.RequestID)
 		return ExitInfra
 	}
-	fmt.Fprintf(ctx.errOut, "acx: %s: %s (%s, request %s)\n", label,
+	fmt.Fprintf(ctx.errOut, "gauntlet: %s: %s (%s, request %s)\n", label,
 		decoded.Message, decoded.Code, decoded.RequestID)
 	return ExitConfig
 }
@@ -264,7 +264,7 @@ func (ctx *context) mapFailure(label string, response *reply, err error) int {
 func (ctx *context) requireToken() bool {
 	if ctx.options.token == "" {
 		fmt.Fprintln(ctx.errOut,
-			"acx: no token; pass --token or set ACX_TOKEN")
+			"gauntlet: no token; pass --token or set GAUNTLET_TOKEN")
 		return false
 	}
 	return true
@@ -277,7 +277,7 @@ func (ctx *context) validate(operands []string) int {
 		return ExitConfig
 	}
 	if len(operands) != 1 {
-		fmt.Fprintln(ctx.errOut, "acx: validate takes one manifest path")
+		fmt.Fprintln(ctx.errOut, "gauntlet: validate takes one manifest path")
 		return ExitConfig
 	}
 	manifest, code := ctx.readJSONFile(operands[0])
@@ -308,7 +308,7 @@ func (ctx *context) compile(experimentID string, manifest []byte) int {
 		"now":     time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	})
 	if err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: records: %v\n", err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: records: %v\n", err)
 		return ExitConfig
 	}
 	response, err := ctx.client.do("POST",
@@ -339,16 +339,16 @@ func (ctx *context) run(operands []string) int {
 	}
 	if len(operands) != 1 {
 		fmt.Fprintln(ctx.errOut,
-			"acx: run takes one manifest path plus --records and --primitive")
+			"gauntlet: run takes one manifest path plus --records and --primitive")
 		return ExitConfig
 	}
 	if ctx.options.records == "" {
 		fmt.Fprintln(ctx.errOut,
-			"acx: run needs --records: compilation input is configuration")
+			"gauntlet: run needs --records: compilation input is configuration")
 		return ExitConfig
 	}
 	if len(ctx.options.primitives) == 0 {
-		fmt.Fprintln(ctx.errOut, "acx: run needs at least one --primitive")
+		fmt.Fprintln(ctx.errOut, "gauntlet: run needs at least one --primitive")
 		return ExitConfig
 	}
 	manifest, code := ctx.readJSONFile(operands[0])
@@ -371,7 +371,7 @@ func (ctx *context) run(operands []string) int {
 		"allowed_primitives": ctx.options.primitives,
 	})
 	if err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: run request: %v\n", err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: run request: %v\n", err)
 		return ExitConfig
 	}
 	response, err = ctx.client.do("POST",
@@ -401,7 +401,7 @@ func (ctx *context) compare(operands []string) int {
 		return ExitConfig
 	}
 	if len(operands) != 2 {
-		fmt.Fprintln(ctx.errOut, "acx: compare takes two run ids")
+		fmt.Fprintln(ctx.errOut, "gauntlet: compare takes two run ids")
 		return ExitConfig
 	}
 	baseline, code := ctx.fetchRun(operands[0])
@@ -414,7 +414,7 @@ func (ctx *context) compare(operands []string) int {
 	}
 	if baseline["experiment_id"] != treatment["experiment_id"] {
 		fmt.Fprintln(ctx.errOut,
-			"acx: the runs belong to different experiments; a partial pair refuses the comparison")
+			"gauntlet: the runs belong to different experiments; a partial pair refuses the comparison")
 		return ExitConfig
 	}
 	treatmentGate := gateForRun(treatment)
@@ -433,7 +433,7 @@ func (ctx *context) inspect(operands []string) int {
 		return ExitConfig
 	}
 	if len(operands) != 1 {
-		fmt.Fprintln(ctx.errOut, "acx: inspect takes one run id")
+		fmt.Fprintln(ctx.errOut, "gauntlet: inspect takes one run id")
 		return ExitConfig
 	}
 	run, code := ctx.fetchRun(operands[0])
@@ -458,14 +458,14 @@ func (ctx *context) stop(operands []string) int {
 		return ExitConfig
 	}
 	if len(operands) != 1 {
-		fmt.Fprintln(ctx.errOut, "acx: stop takes one run id")
+		fmt.Fprintln(ctx.errOut, "gauntlet: stop takes one run id")
 		return ExitConfig
 	}
 	request, err := json.Marshal(map[string]any{
 		"sandbox": "terminate", "reason": ctx.options.reason,
 	})
 	if err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: stop request: %v\n", err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: stop request: %v\n", err)
 		return ExitConfig
 	}
 	response, err := ctx.client.do("POST",
@@ -484,7 +484,7 @@ func (ctx *context) report(operands []string) int {
 		return ExitConfig
 	}
 	if len(operands) != 1 {
-		fmt.Fprintln(ctx.errOut, "acx: report takes one run id")
+		fmt.Fprintln(ctx.errOut, "gauntlet: report takes one run id")
 		return ExitConfig
 	}
 	run, code := ctx.fetchRun(operands[0])
@@ -494,7 +494,7 @@ func (ctx *context) report(operands []string) int {
 	if ctx.options.format == "json" {
 		encoded, err := json.MarshalIndent(run, "", "  ")
 		if err != nil {
-			fmt.Fprintf(ctx.errOut, "acx: report: %v\n", err)
+			fmt.Fprintf(ctx.errOut, "gauntlet: report: %v\n", err)
 			return ExitInfra
 		}
 		fmt.Fprintln(ctx.out, string(encoded))
@@ -514,7 +514,7 @@ func (ctx *context) assurance(operands []string) int {
 		return ExitConfig
 	}
 	if len(operands) != 2 || operands[0] != "explain" {
-		fmt.Fprintln(ctx.errOut, "acx: usage: acx assurance explain CLAIM_ID")
+		fmt.Fprintln(ctx.errOut, "gauntlet: usage: gauntlet assurance explain CLAIM_ID")
 		return ExitConfig
 	}
 	response, err := ctx.client.do("GET",
@@ -524,7 +524,7 @@ func (ctx *context) assurance(operands []string) int {
 	}
 	claim := map[string]any{}
 	if err := json.Unmarshal(response.body, &claim); err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: claim reply: %v\n", err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: claim reply: %v\n", err)
 		return ExitInfra
 	}
 	code := ctx.printClaimCard(claim)
@@ -580,7 +580,7 @@ func (ctx *context) fetchRun(runID string) (map[string]any, int) {
 	}
 	run := map[string]any{}
 	if err := json.Unmarshal(response.body, &run); err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: run reply: %v\n", err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: run reply: %v\n", err)
 		return nil, ExitInfra
 	}
 	return run, ExitOK
@@ -604,11 +604,11 @@ func (ctx *context) printEvidence(runID string) int {
 func (ctx *context) readJSONFile(path string) ([]byte, int) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintf(ctx.errOut, "acx: %s: %v\n", path, err)
+		fmt.Fprintf(ctx.errOut, "gauntlet: %s: %v\n", path, err)
 		return nil, ExitConfig
 	}
 	if !json.Valid(raw) {
-		fmt.Fprintf(ctx.errOut, "acx: %s is not JSON\n", path)
+		fmt.Fprintf(ctx.errOut, "gauntlet: %s is not JSON\n", path)
 		return nil, ExitConfig
 	}
 	return raw, ExitOK

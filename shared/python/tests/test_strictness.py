@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_schemas import StrictnessError, assert_schema_strict
+from gauntlet_schemas import StrictnessError, assert_schema_strict
 
 
 def test_every_registered_schema_is_strict(registry):

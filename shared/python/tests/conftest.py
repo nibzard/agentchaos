@@ -7,7 +7,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from acx_schemas import ContractRegistry, default_registry  # noqa: E402
+from gauntlet_schemas import ContractRegistry, default_registry  # noqa: E402
 
 REPO_ROOT = PACKAGE_ROOT.parent.parent
 FIXTURE_DIR = REPO_ROOT / "shared" / "fixtures" / "valid"

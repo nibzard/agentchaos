@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_compiler.canonical import canonical_json, sha256_digest
+from gauntlet_compiler.canonical import canonical_json, sha256_digest
 
 
 def test_keys_are_sorted_and_whitespace_removed():

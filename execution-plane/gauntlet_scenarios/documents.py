@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from acx_scenarios.templates import Template
+from gauntlet_scenarios.templates import Template
 
 SCENARIO_VERSION = "1.0.0"
 

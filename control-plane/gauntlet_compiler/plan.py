@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from acx_compiler.canonical import sha256_digest
+from gauntlet_compiler.canonical import sha256_digest
 
 ARTIFACT_SCHEMA_VERSION = "v1"
 

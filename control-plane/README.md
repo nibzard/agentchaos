@@ -1,16 +1,16 @@
 # Control plane
 
 Services for definitions, scheduling, and result comparison (ADR-0001).
-The Python package `acx_compiler` compiles experiment manifests. The Go
+The Python package `gauntlet_compiler` compiles experiment manifests. The Go
 module `gauntlet/control` classifies finished runs.
 
-## acx_compiler
+## gauntlet_compiler
 
 Compile an Experiment manifest into a signed plan (spec 9.1). Only the
 compiler can authorize execution; an LLM may draft the manifest.
 
 ```python
-from acx_compiler import (
+from gauntlet_compiler import (
     Ed25519Signer, MemoryResourceStore, compile_manifest,
 )
 
@@ -49,15 +49,15 @@ The `ResourceStore` protocol supplies workload versions, autonomy
 profiles, scenario versions, targets, and credentials. Targets validate
 against the Target contract in `shared/schemas`; credentials have no
 shared contract yet, so their record shape is in
-`acx_compiler/records.py`.
+`gauntlet_compiler/records.py`.
 
 ## Enrollment and selection
 
-`acx_compiler/enrollment.py` owns the explicit target lifecycle (spec
+`gauntlet_compiler/enrollment.py` owns the explicit target lifecycle (spec
 7, 13.1, AC-002):
 
 ```python
-from acx_compiler import EnrollmentRegistry
+from gauntlet_compiler import EnrollmentRegistry
 
 registry = EnrollmentRegistry()
 registry.enroll(
@@ -78,7 +78,7 @@ validates every record against the Target contract, refuses invalid
 transitions, keeps an audit log, and reports cross-tenant lookups as
 `not_found` so it never confirms another tenant's target exists.
 
-`acx_compiler/selection.py` resolves selectors to an explicit enrolled
+`gauntlet_compiler/selection.py` resolves selectors to an explicit enrolled
 set and fails closed on everything else:
 
 - a selector without explicit `target_ids`;
@@ -89,7 +89,7 @@ set and fails closed on everything else:
 - one target selected by two selectors.
 
 ```python
-from acx_compiler import resolve_selectors, revalidate_selection
+from gauntlet_compiler import resolve_selectors, revalidate_selection
 
 outcome = resolve_selectors(
     manifest["selectors"], store,

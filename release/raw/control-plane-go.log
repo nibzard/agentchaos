@@ -1,2 +1,2 @@
 $ go test ./... (in control-plane)
-ok  	gauntlet/control	0.997s
+ok  	gauntlet/control	1.035s

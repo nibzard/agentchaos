@@ -1,6 +1,6 @@
 """Fault adapters and the conformance suite (spec 8.2, 9.3, AC-028)."""
 
-from acx_adapters.adapter import (
+from gauntlet_adapters.adapter import (
     AdapterRefusal,
     FaultAdapter,
     ReferenceFileAdapter,
@@ -9,8 +9,8 @@ from acx_adapters.adapter import (
     reference_manifest,
     workspace_tree,
 )
-from acx_adapters.conformance import failed_checks, run_conformance
-from acx_adapters.contract import ContractError, validate_manifest
+from gauntlet_adapters.conformance import failed_checks, run_conformance
+from gauntlet_adapters.contract import ContractError, validate_manifest
 
 __all__ = [
     "AdapterRefusal",

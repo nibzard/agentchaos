@@ -32,12 +32,12 @@ type Compiler interface {
 		now string) (*ValidationResult, []CompileFailure, error)
 }
 
-// pythonCompiler shells out to `python3 -m acx_compiler` in the
+// pythonCompiler shells out to `python3 -m gauntlet_compiler` in the
 // control-plane directory. JSON goes in on standard input and comes
 // back on standard output: compile failures are results (ok=false,
 // exit 0); a nonzero exit is an outage.
 type pythonCompiler struct {
-	dir    string // directory containing the acx_compiler package
+	dir    string // directory containing the gauntlet_compiler package
 	python string // interpreter binary
 }
 
@@ -69,7 +69,7 @@ func (p *pythonCompiler) Compile(experiment map[string]any,
 	if err != nil {
 		return nil, nil, fmt.Errorf("compile request encoding: %w", err)
 	}
-	run := exec.Command(p.python, "-m", "acx_compiler")
+	run := exec.Command(p.python, "-m", "gauntlet_compiler")
 	run.Dir = p.dir
 	run.Stdin = bytes.NewReader(encoded)
 	var stdout, stderr bytes.Buffer

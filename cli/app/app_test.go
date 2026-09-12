@@ -1,6 +1,6 @@
 package app
 
-// Tests for the acx CLI (spec 17.7 / T029) against a scripted stub
+// Tests for the gauntlet CLI (spec 17.7 / T029) against a scripted stub
 // API. The stub records every request so the tests can pin headers
 // (bearer token, idempotency key per mutation) and paths, and the
 // exit-code table: 0 gate passed, 2 gate failed, 3 inconclusive,
@@ -121,7 +121,7 @@ func runAt(t *testing.T, api, token string, args ...string) (int, string, string
 		args...)...)
 }
 
-const cliToken = "acx1.test-token"
+const cliToken = "gauntlet1.test-token"
 
 func writeFile(t *testing.T, name, content string) string {
 	t.Helper()
@@ -573,8 +573,8 @@ func TestFlagsAndEnvironmentResolve(t *testing.T) {
 		match: "GET /v1/runs/run_cli000000000001", status: http.StatusOK,
 		body: runDocument("stopped", "CLEAN"),
 	})
-	t.Setenv("ACX_API", stub.url())
-	t.Setenv("ACX_TOKEN", cliToken)
+	t.Setenv("GAUNTLET_API", stub.url())
+	t.Setenv("GAUNTLET_TOKEN", cliToken)
 	code, _, errOut := run(t, "inspect", "run_cli000000000001")
 	if code != ExitOK {
 		t.Fatalf("environment exit %d, stderr %s", code, errOut)

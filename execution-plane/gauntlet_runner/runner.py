@@ -23,13 +23,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Protocol
 
-from acx_runner.environments import (
+from gauntlet_runner.environments import (
     Environment,
     InstallError,
     LocalFixtureEnvironments,
 )
-from acx_runner.ids import mint_run_id
-from acx_runner.outcomes import (
+from gauntlet_runner.ids import mint_run_id
+from gauntlet_runner.outcomes import (
     normalize_injections,
     provisional_outcome,
     terminal_state_for,

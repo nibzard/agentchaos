@@ -1,6 +1,6 @@
 """Injection receipts and provisional outcome labels."""
 
-from acx_runner import MAX_INJECTIONS, normalize_injections, provisional_outcome
+from gauntlet_runner import MAX_INJECTIONS, normalize_injections, provisional_outcome
 
 SCENARIO = "scn_" + "a" * 16
 

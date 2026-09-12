@@ -99,7 +99,7 @@ func (t *TenantSealer) aad(tenantID string) []byte {
 // sealedMark marks a string as keycustody ciphertext: the first dot
 // part of the sealed form. Downstream stores can recognize it without
 // knowing the key material.
-const sealedMark = "acxseal"
+const sealedMark = "gauntletseal"
 
 // encodeSealed binds the tenant and usage into the sealed string:
 // the mark, then base64 tenant, usage, and ciphertext as dot parts.

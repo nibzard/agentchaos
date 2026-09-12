@@ -22,8 +22,8 @@ import string
 
 import pytest
 
-from acx_compiler import CompileViolation, compile_manifest
-from acx_compiler.canonical import canonical_json
+from gauntlet_compiler import CompileViolation, compile_manifest
+from gauntlet_compiler.canonical import canonical_json
 from conftest import NOW, build_store, draft_experiment, make_signer
 
 SEED = 20260930

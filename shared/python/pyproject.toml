@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "acx-schemas"
+name = "gauntlet-schemas"
 version = "0.1.0"
 description = "Strict contract schemas and validator for AgentChaos resources"
 readme = "README.md"
@@ -14,7 +14,7 @@ dependencies = ["jsonschema>=4.10,<5"]
 test = ["pytest>=7"]
 
 [tool.setuptools.packages.find]
-include = ["acx_schemas*"]
+include = ["gauntlet_schemas*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

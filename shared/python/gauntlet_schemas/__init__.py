@@ -5,9 +5,9 @@ resource instances fail-closed: unknown fields, unknown contract
 versions, and malformed values are rejected, never ignored.
 """
 
-from acx_schemas.errors import ContractViolation, UnknownResourceKind
-from acx_schemas.loader import ContractRegistry, default_registry
-from acx_schemas.strictness import StrictnessError, assert_schema_strict
+from gauntlet_schemas.errors import ContractViolation, UnknownResourceKind
+from gauntlet_schemas.loader import ContractRegistry, default_registry
+from gauntlet_schemas.strictness import StrictnessError, assert_schema_strict
 
 __all__ = [
     "ContractRegistry",

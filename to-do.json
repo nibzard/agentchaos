@@ -1245,7 +1245,7 @@
       "id": "T056",
       "title": "Retire the acx wire namespace prefix",
       "priority": 3,
-      "status": "todo",
+      "status": "done",
       "details": "Rename the acx prefix (X-ACX headers, acx1 token version, acx_compiler, acx_runner, acx_schemas, the reserved CLI name) once the rename can land atomically. Must land before any public API compatibility promise (ADR-0003).",
       "depends_on": [
         "T046"
@@ -1253,7 +1253,25 @@
       "tags": [
         "naming",
         "release"
-      ]
+      ],
+      "files": [
+        "docs/architecture/0004-retire-acx-prefix.md",
+        "docs/architecture/0003-name-and-license.md",
+        "broker/server.go",
+        "api/auth.go",
+        "api/compiler.go",
+        "keycustody/sealer.go",
+        "cli/gauntlet/main.go",
+        "cli/app/app.go",
+        "control-plane/gauntlet_compiler",
+        "execution-plane/gauntlet_runner",
+        "execution-plane/gauntlet_scenarios",
+        "execution-plane/gauntlet_adapters",
+        "shared/python/gauntlet_schemas",
+        "packaging/manifest.json",
+        "release/exit_gate.py"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T047",

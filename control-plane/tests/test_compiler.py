@@ -3,9 +3,9 @@
 import copy
 
 import pytest
-from acx_schemas import ContractViolation, validate
+from gauntlet_schemas import ContractViolation, validate
 
-from acx_compiler import CompileViolation, compile_manifest, verify_signature
+from gauntlet_compiler import CompileViolation, compile_manifest, verify_signature
 
 from conftest import (
     NOW,
@@ -103,7 +103,7 @@ def _compile_with_signer():
 
 
 def _canonical_grant(result):
-    from acx_compiler.canonical import canonical_bytes
+    from gauntlet_compiler.canonical import canonical_bytes
 
     return canonical_bytes(result.grant)
 
@@ -522,7 +522,7 @@ def test_semver_build_metadata_sanitized_into_contract_paths():
 
 
 def test_signer_rejects_key_ids_outside_the_contract_pattern():
-    from acx_compiler import Ed25519Signer
+    from gauntlet_compiler import Ed25519Signer
 
     with pytest.raises(ValueError):
         Ed25519Signer.generate("Key_Bad")
@@ -582,7 +582,7 @@ def test_production_synthetic_without_opt_in_rejected():
 
 
 def test_production_synthetic_with_opt_in_compiles():
-    from acx_compiler import RiskPolicy
+    from gauntlet_compiler import RiskPolicy
 
     scenario = load_fixture("scenario-version")
     scenario["mode_eligibility"].append(
@@ -611,7 +611,7 @@ def test_compiled_plan_selectors_feed_revalidation():
     """The plan snapshot is the pre-injection reference (spec 7, 13.2)."""
     from conftest import TENANT
 
-    from acx_compiler import revalidate_selection
+    from gauntlet_compiler import revalidate_selection
 
     result = _compile(draft_experiment())
     selectors = draft_experiment()["manifest"]["selectors"]

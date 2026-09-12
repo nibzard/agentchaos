@@ -17,9 +17,9 @@ import (
 // sets these from a verified credential; the broker never derives a
 // tenant from a body (spec 18.3).
 const (
-	HeaderActor  = "X-ACX-Actor"
-	HeaderTenant = "X-ACX-Tenant"
-	HeaderRole   = "X-ACX-Role"
+	HeaderActor  = "X-Gauntlet-Actor"
+	HeaderTenant = "X-Gauntlet-Tenant"
+	HeaderRole   = "X-Gauntlet-Role"
 	HeaderIdem   = "Idempotency-Key"
 )
 

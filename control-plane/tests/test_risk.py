@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_compiler.risk import classify_risk
+from gauntlet_compiler.risk import classify_risk
 
 
 def test_isolated_conservate_setup_is_low():

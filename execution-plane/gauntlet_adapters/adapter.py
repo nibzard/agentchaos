@@ -14,7 +14,7 @@ import hashlib
 import shutil
 from pathlib import Path
 
-from acx_adapters.contract import validate_manifest
+from gauntlet_adapters.contract import validate_manifest
 
 
 class AdapterRefusal(Exception):

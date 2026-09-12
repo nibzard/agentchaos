@@ -9,7 +9,7 @@ None. Every component ships against a standard library only:
 - The Go modules (`gauntlet/api`, `gauntlet/broker`, `gauntlet/control`,
   `gauntlet/evidence`, `gauntlet/governor`) import the Go standard
   library and each other. `go.mod` carries no third-party requires.
-- The Python packages (`acx_compiler`, `acx_runner`, `acx_schemas`)
+- The Python packages (`gauntlet_compiler`, `gauntlet_runner`, `gauntlet_schemas`)
   import the Python standard library only.
 - The TypeScript UI (`ui/`) uses the Web platform and DOM standard
   APIs only. `package.json` declares no dependencies; the bundle

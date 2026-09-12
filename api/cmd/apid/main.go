@@ -24,7 +24,7 @@ func main() {
 	broker := flag.String("broker", "http://127.0.0.1:8081",
 		"upstream effect broker URL")
 	compilerDir := flag.String("compiler-dir", "../control-plane",
-		"directory containing the acx_compiler Python package")
+		"directory containing the gauntlet_compiler Python package")
 	authKeys := flag.String("auth-key", "",
 		"path to a file of base64url Ed25519 public keys, one per line, "+
 			"that verify principal tokens (required; see api/README.md)")

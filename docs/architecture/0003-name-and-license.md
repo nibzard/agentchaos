@@ -4,6 +4,10 @@
 
 Accepted
 
+Amended 2026-09-12: the deferred `acx` prefix retirement landed as
+ADR-0004. This decision's "keep for now" list is resolved; the rest
+stands unchanged.
+
 ## Context
 
 The product specification was drafted under the working name

@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from acx_schemas import ContractViolation
+from gauntlet_schemas import ContractViolation
 
 from conftest import KIND_TO_FIXTURE
 

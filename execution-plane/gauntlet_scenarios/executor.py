@@ -18,8 +18,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from acx_runner.runner import VariantOutcome, VariantSpec
-from acx_scenarios.templates import Template, get_template
+from gauntlet_runner.runner import VariantOutcome, VariantSpec
+from gauntlet_scenarios.templates import Template, get_template
 
 HOLD = "hold"
 BREAK = "break"

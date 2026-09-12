@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from acx_scenarios.templates import Template
+from gauntlet_scenarios.templates import Template
 
 PASSED = "passed"
 FAILED = "failed"

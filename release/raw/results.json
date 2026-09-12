@@ -17,21 +17,21 @@
     "label": "Supervisor (Go)",
     "passed": true,
     "exit_code": 0,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "log": "release/raw/supervisor-go.log"
   },
   "governor-go": {
     "label": "Governor (Go)",
     "passed": true,
     "exit_code": 0,
-    "seconds": 0.4,
+    "seconds": 0.3,
     "log": "release/raw/governor-go.log"
   },
   "control-plane-go": {
     "label": "Control plane (Go)",
     "passed": true,
     "exit_code": 0,
-    "seconds": 1.1,
+    "seconds": 1.2,
     "log": "release/raw/control-plane-go.log"
   },
   "analysis-go": {
@@ -52,7 +52,7 @@
     "label": "Cross-component integration (Go)",
     "passed": true,
     "exit_code": 0,
-    "seconds": 0.3,
+    "seconds": 0.1,
     "log": "release/raw/integration-go.log"
   },
   "control-plane-py": {

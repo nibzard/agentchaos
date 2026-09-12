@@ -22,8 +22,8 @@ POST /v1/emergency-stop               revoke experiment authority
 GET  /healthz                         liveness
 ```
 
-Callers authenticate through the identity headers `X-ACX-Actor`,
-`X-ACX-Tenant`, and `X-ACX-Role`, set by the deployment's
+Callers authenticate through the identity headers `X-Gauntlet-Actor`,
+`X-Gauntlet-Tenant`, and `X-Gauntlet-Role`, set by the deployment's
 authentication front end. A tenant in a request body never overrides
 the authenticated tenant (spec 18.3).
 
@@ -143,7 +143,7 @@ runs journals nothing for the same reason; the decision log keeps it.
 The EvidenceEvents this governor emits validate against the shared
 contracts in `shared/schemas/`. A cross-language test
 (`crosslang_test.go`) feeds every emitted shape through the
-`acx-schemas` Python validator and skips when it is not installed.
+`gauntlet-schemas` Python validator and skips when it is not installed.
 
 ## Idempotency
 

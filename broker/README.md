@@ -27,8 +27,8 @@ The delegation routes extend the fixed core set of spec 18.2; the
 spec's table is a minimum, and these mutations follow the same
 authentication, role, and idempotency rules as the core set.
 
-Callers authenticate through the identity headers `X-ACX-Actor`,
-`X-ACX-Tenant`, and `X-ACX-Role`, set by the deployment's
+Callers authenticate through the identity headers `X-Gauntlet-Actor`,
+`X-Gauntlet-Tenant`, and `X-Gauntlet-Role`, set by the deployment's
 authentication front end. A tenant in a request body never overrides
 the authenticated tenant (spec 18.3). Worker and collector roles are
 refused on both mutations: workers cannot issue their own permits.

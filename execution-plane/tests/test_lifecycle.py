@@ -9,10 +9,10 @@ the release registry's immutability freeze.
 from __future__ import annotations
 
 import pytest
-from acx_schemas import validate
+from gauntlet_schemas import validate
 
-from acx_runner import FixtureRunner, LocalFixtureEnvironments
-from acx_scenarios import (
+from gauntlet_runner import FixtureRunner, LocalFixtureEnvironments
+from gauntlet_scenarios import (
     DRAFT,
     RELEASED,
     SIGNED,
@@ -30,7 +30,7 @@ from acx_scenarios import (
     validate_isolated,
     verify_release,
 )
-from acx_scenarios.lifecycle import plan_digest, validation_plan
+from gauntlet_scenarios.lifecycle import plan_digest, validation_plan
 from conftest import FixedClock, grant
 
 TENANT = "tnt_9d4c1e2a3b4f5c67"

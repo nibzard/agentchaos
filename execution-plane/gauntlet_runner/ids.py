@@ -22,13 +22,13 @@ def mint_environment_id() -> str:
 
 
 def is_run_id(value: str) -> bool:
-    from acx_runner.patterns import RUN_ID
+    from gauntlet_runner.patterns import RUN_ID
 
     return isinstance(value, str) and RUN_ID.match(value) is not None
 
 
 def is_evidence_event_id(value: str) -> bool:
-    from acx_runner.patterns import EVIDENCE_EVENT_ID
+    from gauntlet_runner.patterns import EVIDENCE_EVENT_ID
 
     return (
         isinstance(value, str)
@@ -37,7 +37,7 @@ def is_evidence_event_id(value: str) -> bool:
 
 
 def is_scenario_version_id(value: str) -> bool:
-    from acx_runner.patterns import SCENARIO_VERSION_ID
+    from gauntlet_runner.patterns import SCENARIO_VERSION_ID
 
     return (
         isinstance(value, str)

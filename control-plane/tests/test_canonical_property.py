@@ -10,7 +10,7 @@ import random
 
 import pytest
 
-from acx_compiler.canonical import canonical_json, sha256_digest
+from gauntlet_compiler.canonical import canonical_json, sha256_digest
 from conftest import draft_experiment
 
 

@@ -11,7 +11,7 @@ import (
 
 // TestEmittedDocumentsValidateAgainstSharedSchemas feeds every
 // EvidenceEvent shape the governor emits through the shared Python
-// validator (shared/schemas + shared/python/acx_schemas). The governor
+// validator (shared/schemas + shared/python/gauntlet_schemas). The governor
 // journals within the spec 9.4 event-kind set — recovery_action for
 // enforcement, budget_change for accounting — and this test is the
 // tripwire that keeps those documents contract-valid. It skips when
@@ -151,7 +151,7 @@ const crosslangCheck = `
 import json, sys
 
 sys.path.insert(0, sys.argv[1])
-from acx_schemas import validate
+from gauntlet_schemas import validate
 
 documents = json.load(open(sys.argv[2]))
 for name, document in documents.items():

@@ -103,7 +103,7 @@ def draft_experiment() -> dict:
 
 
 def build_store(**overrides) -> "MemoryResourceStore":
-    from acx_compiler import MemoryResourceStore
+    from gauntlet_compiler import MemoryResourceStore
 
     resources = {
         "workloads": [load_fixture("workload-version")],
@@ -117,14 +117,14 @@ def build_store(**overrides) -> "MemoryResourceStore":
 
 
 def make_signer():
-    from acx_compiler import Ed25519Signer
+    from gauntlet_compiler import Ed25519Signer
 
     return Ed25519Signer.generate("key_grants-2026q3")
 
 
 def compile_ok(experiment=None, store=None, **kwargs):
     """Compile the happy path; returns (result, signer)."""
-    from acx_compiler import compile_manifest
+    from gauntlet_compiler import compile_manifest
 
     experiment = copy.deepcopy(experiment or draft_experiment())
     signer = make_signer()

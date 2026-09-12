@@ -20,8 +20,8 @@ POST /v1/evidence/collector-check     open findings for silent collectors
 GET  /healthz                         liveness
 ```
 
-Callers authenticate through the identity headers `X-ACX-Actor`,
-`X-ACX-Tenant`, and `X-ACX-Role`, set by the deployment's
+Callers authenticate through the identity headers `X-Gauntlet-Actor`,
+`X-Gauntlet-Tenant`, and `X-Gauntlet-Role`, set by the deployment's
 authentication front end. A tenant in a body never overrides the
 authenticated tenant (spec 18.3). Ingest requires an
 `Idempotency-Key` header matching `idk_[A-Za-z0-9_-]{8,128}`; reuse
@@ -223,4 +223,4 @@ go run ./cmd/evid   # serves on 127.0.0.1:8082
 
 The cross-language test emits stored events and findings and
 validates them against `shared/schemas` through the shared Python
-validator (`shared/python/acx_schemas`).
+validator (`shared/python/gauntlet_schemas`).

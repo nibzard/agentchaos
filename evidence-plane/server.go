@@ -16,9 +16,9 @@ import (
 // Principal headers, resolved by the deployment's authentication
 // front end (spec 18.3). A tenant in a body never overrides them.
 const (
-	HeaderActor  = "X-ACX-Actor"
-	HeaderTenant = "X-ACX-Tenant"
-	HeaderRole   = "X-ACX-Role"
+	HeaderActor  = "X-Gauntlet-Actor"
+	HeaderTenant = "X-Gauntlet-Tenant"
+	HeaderRole   = "X-Gauntlet-Role"
 	HeaderIdem   = "Idempotency-Key"
 )
 

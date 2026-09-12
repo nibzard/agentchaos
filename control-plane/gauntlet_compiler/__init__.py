@@ -18,26 +18,26 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# The shared contracts package (acx_schemas) sits outside this package's
-# tree, at <repo>/shared/python. Add it so importing acx_compiler works
-# without a preinstalled acx_schemas — the compiler validates every
+# The shared contracts package (gauntlet_schemas) sits outside this package's
+# tree, at <repo>/shared/python. Add it so importing gauntlet_compiler works
+# without a preinstalled gauntlet_schemas — the compiler validates every
 # record against the shared contracts and cannot run without them.
 _repo_root = Path(__file__).resolve().parents[2]
 _shared_python = str(_repo_root / "shared" / "python")
 if _shared_python not in sys.path:
     sys.path.insert(0, _shared_python)
 
-from acx_compiler.compiler import DEFAULT_GRANT_TTL_S, compile_manifest
-from acx_compiler.enrollment import (
+from gauntlet_compiler.compiler import DEFAULT_GRANT_TTL_S, compile_manifest
+from gauntlet_compiler.enrollment import (
     EnrollmentError,
     EnrollmentRegistry,
     TRANSITIONS,
 )
-from acx_compiler.errors import CompileErrorEntry, CompileViolation
-from acx_compiler.plan import ArtifactPathCollision, CompiledPlan
-from acx_compiler.records import MemoryResourceStore, ResourceStore
-from acx_compiler.risk import RiskPolicy, classify_risk
-from acx_compiler.selection import (
+from gauntlet_compiler.errors import CompileErrorEntry, CompileViolation
+from gauntlet_compiler.plan import ArtifactPathCollision, CompiledPlan
+from gauntlet_compiler.records import MemoryResourceStore, ResourceStore
+from gauntlet_compiler.risk import RiskPolicy, classify_risk
+from gauntlet_compiler.selection import (
     PRODUCTION_MODES,
     SelectionOutcome,
     SelectionPolicy,
@@ -45,7 +45,7 @@ from acx_compiler.selection import (
     resolve_selectors,
     revalidate_selection,
 )
-from acx_compiler.signing import Ed25519Signer, Signer, verify_signature
+from gauntlet_compiler.signing import Ed25519Signer, Signer, verify_signature
 
 __all__ = [
     "DEFAULT_GRANT_TTL_S",

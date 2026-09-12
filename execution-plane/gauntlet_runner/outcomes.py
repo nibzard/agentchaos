@@ -19,7 +19,7 @@ classifier. Until then the runner never labels PASS or FAIL:
 
 from __future__ import annotations
 
-from acx_runner.ids import is_evidence_event_id, is_scenario_version_id
+from gauntlet_runner.ids import is_evidence_event_id, is_scenario_version_id
 
 DETERMINED = ("triggered", "not_triggered")
 

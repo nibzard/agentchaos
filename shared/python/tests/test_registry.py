@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_schemas.errors import UnknownResourceKind
+from gauntlet_schemas.errors import UnknownResourceKind
 
 
 def test_registry_covers_every_resource(registry):

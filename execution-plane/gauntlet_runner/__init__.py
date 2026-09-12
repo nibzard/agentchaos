@@ -11,19 +11,19 @@ Public surface:
   plan digest; `write_export` persists the bundle.
 """
 
-from acx_runner.environments import (
+from gauntlet_runner.environments import (
     Environment,
     InstallError,
     LocalFixtureEnvironments,
 )
-from acx_runner.export import build_export, write_export
-from acx_runner.outcomes import (
+from gauntlet_runner.export import build_export, write_export
+from gauntlet_runner.outcomes import (
     MAX_INJECTIONS,
     normalize_injections,
     provisional_outcome,
     terminal_state_for,
 )
-from acx_runner.runner import (
+from gauntlet_runner.runner import (
     FixtureRunner,
     GrantExpired,
     PairedRun,

@@ -10,7 +10,7 @@
       "id": "scenario-specification",
       "promise": "The scenario specification: templates, documents, assertions, and the lifecycle that turns a template into trigger evidence",
       "spec_ref": "spec 23.1 scenario specification",
-      "paths": ["execution-plane/acx_scenarios"]
+      "paths": ["execution-plane/gauntlet_scenarios"]
     },
     {
       "id": "schemas",
@@ -28,25 +28,25 @@
       "id": "local-runner",
       "promise": "The local fixture runner that executes paired baseline and treatment variants",
       "spec_ref": "spec 23.1 local runner",
-      "paths": ["execution-plane/acx_runner"]
+      "paths": ["execution-plane/gauntlet_runner"]
     },
     {
       "id": "reference-fixture-environments",
       "promise": "Reference fixture environments with install, digest, and release semantics",
       "spec_ref": "spec 23.1 reference fixture environments",
-      "paths": ["execution-plane/acx_runner"]
+      "paths": ["execution-plane/gauntlet_runner"]
     },
     {
       "id": "synthetic-scenario-pack",
       "promise": "The synthetic scenario pack: all 24 fault templates with assertions and cleanup",
       "spec_ref": "spec 23.1 synthetic scenario pack",
-      "paths": ["execution-plane/acx_scenarios"]
+      "paths": ["execution-plane/gauntlet_scenarios"]
     },
     {
       "id": "adapter-interface",
       "promise": "The fault adapter interface, the reference adapter, and the conformance suite third parties must pass",
       "spec_ref": "spec 23.1 adapter interface",
-      "paths": ["execution-plane/acx_adapters"]
+      "paths": ["execution-plane/gauntlet_adapters"]
     },
     {
       "id": "core-evidence-format",

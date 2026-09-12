@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
-from acx_compiler.canonical import canonical_bytes
+from gauntlet_compiler.canonical import canonical_bytes
 
 ALGORITHM = "ed25519"
 

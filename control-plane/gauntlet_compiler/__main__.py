@@ -34,10 +34,10 @@ from __future__ import annotations
 import json
 import sys
 
-from acx_compiler.compiler import compile_manifest
-from acx_compiler.errors import CompileViolation
-from acx_compiler.records import MemoryResourceStore
-from acx_compiler.signing import Ed25519Signer
+from gauntlet_compiler.compiler import compile_manifest
+from gauntlet_compiler.errors import CompileViolation
+from gauntlet_compiler.records import MemoryResourceStore
+from gauntlet_compiler.signing import Ed25519Signer
 
 RECORD_KINDS = ("workloads", "profiles", "scenarios", "targets", "credentials")
 

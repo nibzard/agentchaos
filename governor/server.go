@@ -15,9 +15,9 @@ import (
 // A tenant in a request body never overrides the authenticated tenant
 // (spec 18.3).
 const (
-	HeaderActor  = "X-ACX-Actor"
-	HeaderTenant = "X-ACX-Tenant"
-	HeaderRole   = "X-ACX-Role"
+	HeaderActor  = "X-Gauntlet-Actor"
+	HeaderTenant = "X-Gauntlet-Tenant"
+	HeaderRole   = "X-Gauntlet-Role"
 )
 
 // Problem is the error envelope (spec 18.3): a stable code, a safe

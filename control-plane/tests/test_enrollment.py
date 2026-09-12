@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_compiler import (
+from gauntlet_compiler import (
     CompileViolation,
     EnrollmentError,
     EnrollmentRegistry,
@@ -279,7 +279,7 @@ def test_paused_target_can_unenroll():
 
 
 def test_store_rejects_duplicate_target_ids():
-    from acx_compiler import MemoryResourceStore
+    from gauntlet_compiler import MemoryResourceStore
 
     with pytest.raises(ValueError):
         MemoryResourceStore(targets=[_target(), _target()])

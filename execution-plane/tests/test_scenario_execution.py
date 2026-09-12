@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from acx_schemas import validate
+from gauntlet_schemas import validate
 
-from acx_runner import FixtureRunner, LocalFixtureEnvironments
-from acx_scenarios import (
+from gauntlet_runner import FixtureRunner, LocalFixtureEnvironments
+from gauntlet_scenarios import (
     TEMPLATE_IDS,
     LibraryExecutor,
     build_scenario_version,
@@ -14,7 +14,7 @@ from acx_scenarios import (
     verify_outcomes,
     worst,
 )
-from acx_scenarios.assertions import FAILED, PASSED, UNKNOWN
+from gauntlet_scenarios.assertions import FAILED, PASSED, UNKNOWN
 from conftest import NOW, FixedClock, grant
 
 TENANT = "tnt_9d4c1e2a3b4f5c67"
@@ -195,7 +195,7 @@ def test_refused_receipt_for_a_forbidden_effect_passes(tmp_path):
 
 def _spec_for(template, arm, tmp_path):
     """A minimal VariantSpec for direct executor calls."""
-    from acx_runner.runner import VariantSpec
+    from gauntlet_runner.runner import VariantSpec
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()

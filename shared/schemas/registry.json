@@ -1,7 +1,7 @@
 {
   "registry_version": 1,
   "contract_base": "https://gauntlet.invalid/schemas/v1/",
-  "description": "Ordered registry of Gauntlet resource contracts. The acx_schemas loader reads this file; every entry must carry a matching kind const inside its schema (spec 18.1).",
+  "description": "Ordered registry of Gauntlet resource contracts. The gauntlet_schemas loader reads this file; every entry must carry a matching kind const inside its schema (spec 18.1).",
   "schemas": [
     {
       "name": "common",

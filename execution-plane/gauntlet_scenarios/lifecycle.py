@@ -36,10 +36,10 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
-from acx_scenarios.assertions import PASSED, verify_outcomes
-from acx_scenarios.documents import parameter_digest, scenario_version_id
-from acx_scenarios.executor import LibraryExecutor
-from acx_scenarios.templates import Template, get_template
+from gauntlet_scenarios.assertions import PASSED, verify_outcomes
+from gauntlet_scenarios.documents import parameter_digest, scenario_version_id
+from gauntlet_scenarios.executor import LibraryExecutor
+from gauntlet_scenarios.templates import Template, get_template
 
 DRAFT = "draft"
 VALIDATED = "validated"

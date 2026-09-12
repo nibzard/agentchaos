@@ -25,12 +25,12 @@ Gate statuses follow spec 22.2. A gate is met only on automated evidence or a do
 |---|---|---|---|
 | Broker (Go) (broker-go) | pass | 1.4 | release/raw/broker-go.log |
 | Evidence plane (Go) (evidence-go) | pass | 0.4 | release/raw/evidence-go.log |
-| Supervisor (Go) (supervisor-go) | pass | 0.1 | release/raw/supervisor-go.log |
-| Governor (Go) (governor-go) | pass | 0.4 | release/raw/governor-go.log |
-| Control plane (Go) (control-plane-go) | pass | 1.1 | release/raw/control-plane-go.log |
+| Supervisor (Go) (supervisor-go) | pass | 0.2 | release/raw/supervisor-go.log |
+| Governor (Go) (governor-go) | pass | 0.3 | release/raw/governor-go.log |
+| Control plane (Go) (control-plane-go) | pass | 1.2 | release/raw/control-plane-go.log |
 | Analysis (Go) (analysis-go) | pass | 0.1 | release/raw/analysis-go.log |
 | CLI (Go) (cli-go) | pass | 0.1 | release/raw/cli-go.log |
-| Cross-component integration (Go) (integration-go) | pass | 0.3 | release/raw/integration-go.log |
+| Cross-component integration (Go) (integration-go) | pass | 0.1 | release/raw/integration-go.log |
 | Control plane compiler (Python) (control-plane-py) | pass | 1.2 | release/raw/control-plane-py.log |
 | Execution plane (Python) (execution-plane-py) | pass | 0.8 | release/raw/execution-plane-py.log |
 | UI (Bun) (ui-bun) | pass | 0.0 | release/raw/ui-bun.log |

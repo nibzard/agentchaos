@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import copy
 
-from acx_schemas import ContractViolation, validate
+from gauntlet_schemas import ContractViolation, validate
 
 # Allowed status transitions. Anything not listed fails closed.
 # Re-enrolling an unenrolled target is a fresh `enroll` call with its own

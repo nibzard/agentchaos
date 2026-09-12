@@ -14,14 +14,14 @@ property, and a break script where it does not, so every assertion can
 be shown to fail, not just to pass.
 """
 
-from acx_scenarios.assertions import AssertionVerdict, verify_outcomes, worst
-from acx_scenarios.documents import (
+from gauntlet_scenarios.assertions import AssertionVerdict, verify_outcomes, worst
+from gauntlet_scenarios.documents import (
     build_scenario_version,
     fixture_digest,
     scenario_version_id,
 )
-from acx_scenarios.executor import LibraryExecutor
-from acx_scenarios.templates import (
+from gauntlet_scenarios.executor import LibraryExecutor
+from gauntlet_scenarios.templates import (
     TEMPLATE_IDS,
     Script,
     Step,
@@ -30,7 +30,7 @@ from acx_scenarios.templates import (
     library,
 )
 
-from acx_scenarios.lifecycle import (
+from gauntlet_scenarios.lifecycle import (
     DRAFT,
     RELEASED,
     SIGNED,

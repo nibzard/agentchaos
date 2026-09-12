@@ -19,7 +19,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from acx_runner.ids import mint_environment_id
+from gauntlet_runner.ids import mint_environment_id
 
 _FORBIDDEN_PATH = re.compile(r"(?:^|/)\.\.?(?:/|$)|^[A-Za-z]:|^/")
 

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, RefResolver
 
-from acx_schemas.errors import ContractErrorEntry, ContractViolation, UnknownResourceKind
+from gauntlet_schemas.errors import ContractErrorEntry, ContractViolation, UnknownResourceKind
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent
 SCHEMA_DIR = _PACKAGE_ROOT.parent.parent / "schemas"

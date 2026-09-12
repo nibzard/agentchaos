@@ -17,9 +17,9 @@ import (
 // (spec 18.3). A tenant in a request body never overrides the
 // authenticated tenant.
 const (
-	HeaderActor  = "X-ACX-Actor"
-	HeaderTenant = "X-ACX-Tenant"
-	HeaderRole   = "X-ACX-Role"
+	HeaderActor  = "X-Gauntlet-Actor"
+	HeaderTenant = "X-Gauntlet-Tenant"
+	HeaderRole   = "X-Gauntlet-Role"
 	HeaderIdem   = "Idempotency-Key"
 )
 

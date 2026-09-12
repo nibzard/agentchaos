@@ -282,7 +282,7 @@ def gate_b2(results: dict[str, dict]) -> dict:
     template_count = None
     counted = subprocess.run(
         [sys.executable, "-c",
-         "from acx_scenarios import TEMPLATE_IDS; "
+         "from gauntlet_scenarios import TEMPLATE_IDS; "
          "print(len(TEMPLATE_IDS))"],
         cwd=ROOT / "execution-plane",
         capture_output=True, text=True, timeout=120,

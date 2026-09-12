@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from acx_schemas import validate
+from gauntlet_schemas import validate
 
-from acx_scenarios import (
+from gauntlet_scenarios import (
     TEMPLATE_IDS,
     build_scenario_version,
     get_template,

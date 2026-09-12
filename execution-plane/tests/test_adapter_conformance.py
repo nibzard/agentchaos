@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from acx_adapters import (
+from gauntlet_adapters import (
     AdapterRefusal,
     FaultAdapter,
     ReferenceFileAdapter,
@@ -19,7 +19,7 @@ from acx_adapters import (
     run_conformance,
     validate_manifest,
 )
-from acx_adapters.conformance import SCENARIO_ID, check_record
+from gauntlet_adapters.conformance import SCENARIO_ID, check_record
 
 
 def probe(adapter):

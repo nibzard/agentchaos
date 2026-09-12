@@ -3,9 +3,9 @@
 import json
 
 import pytest
-from acx_schemas import ContractViolation, validate
+from gauntlet_schemas import ContractViolation, validate
 
-from acx_runner import (
+from gauntlet_runner import (
     Environment,
     FixtureRunner,
     LocalFixtureEnvironments,
@@ -489,7 +489,7 @@ def test_write_export_round_trips(tmp_path):
 
 def test_runs_from_a_real_compiled_plan(tmp_path):
     """A CompiledPlan from compile_manifest drives the runner directly."""
-    from acx_compiler import (
+    from gauntlet_compiler import (
         Ed25519Signer,
         MemoryResourceStore,
         compile_manifest,

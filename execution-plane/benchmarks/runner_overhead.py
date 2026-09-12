@@ -30,8 +30,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from acx_runner import FixtureRunner, LocalFixtureEnvironments
-from acx_runner.runner import VariantOutcome
+from gauntlet_runner import FixtureRunner, LocalFixtureEnvironments
+from gauntlet_runner.runner import VariantOutcome
 
 TENANT = "tnt_9d4c1e2a3b4f5c67"
 GRANT = {

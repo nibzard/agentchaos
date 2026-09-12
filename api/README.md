@@ -20,7 +20,7 @@ over many microservices at beta:
   enforcement point; the proxy adds nothing.
 - The **compiler** stays Python (spec 9.1: only the deterministic
   compiler authorizes execution). Validation shells out to
-  `python3 -m acx_compiler` in `../control-plane`: one JSON request on
+  `python3 -m gauntlet_compiler` in `../control-plane`: one JSON request on
   standard input, one JSON reply on standard output. Compile failures
   are results (`ok=false`, exit 0); a nonzero exit is an outage and
   reports `compiler_unavailable`, never a silent pass.
@@ -53,13 +53,13 @@ authentication front end verifies the human or service login and issues
 a short-lived token that binds actor, tenant, and role:
 
 ```text
-Authorization: Bearer acx1.<base64url payload>.<base64url signature>
+Authorization: Bearer gauntlet1.<base64url payload>.<base64url signature>
 payload: {"actor","tenant","role","exp"}   signature: Ed25519
 ```
 
 The API verifies the token against the front end's public keys and
-derives identity itself. It then sets the `X-ACX-Actor`, `X-ACX-Tenant`,
-and `X-ACX-Role` headers on the request from the verified values, which
+derives identity itself. It then sets the `X-Gauntlet-Actor`, `X-Gauntlet-Tenant`,
+and `X-Gauntlet-Role` headers on the request from the verified values, which
 is the only way those headers come to exist: identity headers a client
 sends are overwritten, never read. The governor, the evidence plane,
 and the broker proxy all see identity the API derived. The bearer token

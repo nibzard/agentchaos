@@ -1,7 +1,7 @@
 {
   "kind": "ExitGateReport",
   "api_version": "v1",
-  "generated_at": "2026-09-12T15:43:45Z",
+  "generated_at": "2026-09-12T15:53:13Z",
   "verdict": "gates unmet: B2, B3, B4, B5, B6, B7, B8, B9, B10",
   "suites": {
     "broker-go": {
@@ -22,21 +22,21 @@
       "label": "Supervisor (Go)",
       "passed": true,
       "exit_code": 0,
-      "seconds": 0.1,
+      "seconds": 0.2,
       "log": "release/raw/supervisor-go.log"
     },
     "governor-go": {
       "label": "Governor (Go)",
       "passed": true,
       "exit_code": 0,
-      "seconds": 0.4,
+      "seconds": 0.3,
       "log": "release/raw/governor-go.log"
     },
     "control-plane-go": {
       "label": "Control plane (Go)",
       "passed": true,
       "exit_code": 0,
-      "seconds": 1.1,
+      "seconds": 1.2,
       "log": "release/raw/control-plane-go.log"
     },
     "analysis-go": {
@@ -57,7 +57,7 @@
       "label": "Cross-component integration (Go)",
       "passed": true,
       "exit_code": 0,
-      "seconds": 0.3,
+      "seconds": 0.1,
       "log": "release/raw/integration-go.log"
     },
     "control-plane-py": {

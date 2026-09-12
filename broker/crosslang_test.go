@@ -11,7 +11,7 @@ import (
 
 // TestEmittedDocumentsValidateAgainstSharedSchemas feeds every Effect
 // and EvidenceEvent shape the broker emits through the shared Python
-// validator (shared/schemas + shared/python/acx_schemas). The Go
+// validator (shared/schemas + shared/python/gauntlet_schemas). The Go
 // structs mirror the contracts; this test is the tripwire that keeps
 // the mirror honest. It skips when python3 or the shared package is
 // not available.
@@ -306,7 +306,7 @@ const crosslangCheck = `
 import json, sys
 
 sys.path.insert(0, sys.argv[1])
-from acx_schemas import validate
+from gauntlet_schemas import validate
 
 documents = json.load(open(sys.argv[2]))
 for name, document in documents.items():

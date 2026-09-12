@@ -19,15 +19,15 @@ import (
 //
 // Wire format:
 //
-//	Authorization: Bearer acx1.<base64url payload>.<base64url signature>
+//	Authorization: Bearer gauntlet1.<base64url payload>.<base64url signature>
 //
 // The payload is JSON {"actor","tenant","role","exp"} and the signature
 // is Ed25519 over the exact payload bytes as transmitted, so nothing
 // depends on JSON canonicalization. The API holds public keys only; the
 // private key never leaves the front end.
 const (
-	tokenPrefix  = "acx1."
-	tokenVersion = "acx1"
+	tokenPrefix  = "gauntlet1."
+	tokenVersion = "gauntlet1"
 )
 
 // Authenticator verifies principal tokens against the front end's

@@ -9,20 +9,20 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from acx_schemas import ContractViolation, validate
+from gauntlet_schemas import ContractViolation, validate
 
-from acx_compiler.canonical import sha256_digest
-from acx_compiler.errors import CompileErrorEntry, CompileViolation
-from acx_compiler.plan import (
+from gauntlet_compiler.canonical import sha256_digest
+from gauntlet_compiler.errors import CompileErrorEntry, CompileViolation
+from gauntlet_compiler.plan import (
     ArtifactPathCollision,
     CompiledPlan,
     build_artifact_digests,
     build_grant_payload,
     build_plan_document,
 )
-from acx_compiler.records import ResourceStore
-from acx_compiler.risk import RISK_ORDER, RiskPolicy, classify_risk
-from acx_compiler.selection import expand_selectors
+from gauntlet_compiler.records import ResourceStore
+from gauntlet_compiler.risk import RISK_ORDER, RiskPolicy, classify_risk
+from gauntlet_compiler.selection import expand_selectors
 
 DEFAULT_GRANT_TTL_S = 300
 DEFAULT_POLICY = RiskPolicy()

@@ -2,7 +2,7 @@
 
 import pytest
 
-from acx_compiler import (
+from gauntlet_compiler import (
     CompileViolation,
     SelectionPolicy,
     expand_selectors,

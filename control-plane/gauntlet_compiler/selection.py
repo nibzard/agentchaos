@@ -25,9 +25,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from acx_schemas import ContractViolation, validate
+from gauntlet_schemas import ContractViolation, validate
 
-from acx_compiler.errors import CompileErrorEntry, CompileViolation
+from gauntlet_compiler.errors import CompileErrorEntry, CompileViolation
 
 PRODUCTION_MODES = frozenset({"production_synthetic", "customer_canary"})
 

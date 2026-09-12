@@ -1,4 +1,4 @@
-# acx CLI
+# gauntlet CLI
 
 The operator command line (spec 17.7, T029). One static binary, Go
 standard library only, speaking the API monolith's HTTP contract: the
@@ -8,18 +8,18 @@ the problem envelope on every failure.
 ## Commands
 
 ```text
-acx validate MANIFEST [--records FILE]   store a draft, optionally compile
-acx run MANIFEST --records FILE --primitive P [--output DIR]
+gauntlet validate MANIFEST [--records FILE]   store a draft, optionally compile
+gauntlet run MANIFEST --records FILE --primitive P [--output DIR]
                                         compile and start a run
-acx compare RUN_BASELINE RUN_TREATMENT  paired run comparison
-acx inspect RUN_ID [--evidence]         run state, optionally its events
-acx stop RUN_ID [--reason TEXT]         request fencing and cleanup
-acx report RUN_ID [--format text|json]  run report
-acx assurance explain CLAIM_ID          render the evidence card
+gauntlet compare RUN_BASELINE RUN_TREATMENT  paired run comparison
+gauntlet inspect RUN_ID [--evidence]         run state, optionally its events
+gauntlet stop RUN_ID [--reason TEXT]         request fencing and cleanup
+gauntlet report RUN_ID [--format text|json]  run report
+gauntlet assurance explain CLAIM_ID          render the evidence card
 ```
 
 `--api` (default `http://localhost:8080`) and `--token` can also come
-from `ACX_API` and `ACX_TOKEN`; flags win. `--primitive` repeats and
+from `GAUNTLET_API` and `GAUNTLET_TOKEN`; flags win. `--primitive` repeats and
 also accepts comma-separated lists.
 
 ## Exit codes
@@ -61,7 +61,7 @@ run.
 
 ```bash
 cd cli && go test ./...
-go build -o acx ./acx
+go build -o gauntlet ./gauntlet
 ```
 
 The tests drive `Main` against a scripted stub server and pin the

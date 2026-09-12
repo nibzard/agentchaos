@@ -6,10 +6,10 @@ baseline variant and one treatment variant per scenario in fresh
 disposable environments, and exports paired results bound to the
 workload fingerprint.
 
-## acx_runner
+## gauntlet_runner
 
 ```python
-from acx_runner import (
+from gauntlet_runner import (
     FixtureRunner, LocalFixtureEnvironments, build_export, write_export,
 )
 
@@ -86,16 +86,16 @@ and report tasks (T021, T030) consume this shape. It is a derived
 internal format, not a registered contract, until those tasks
 stabilize it.
 
-## acx_scenarios: the initial template library
+## gauntlet_scenarios: the initial template library
 
 The 24 scenario templates F01 through F24 (spec 12) live in
-`acx_scenarios/templates.py` as pure data. Each template carries
+`gauntlet_scenarios/templates.py` as pure data. Each template carries
 everything spec 12 demands: benign and treatment variants,
 prerequisites, the injection receipt fields, the expected observation,
 independent outcome assertions, and a cleanup test.
 
 ```python
-from acx_scenarios import (
+from gauntlet_scenarios import (
     LibraryExecutor, build_scenario_version, get_template, verify_outcomes,
 )
 
@@ -117,7 +117,7 @@ and timestamp always produce the same document, ids, and digests.
 
 ## Scenario lifecycle
 
-`acx_scenarios.lifecycle` moves a draft ScenarioVersion through the
+`gauntlet_scenarios.lifecycle` moves a draft ScenarioVersion through the
 four states of spec 12.1 (T016). Every transition has one gate and
 fails closed — a refused transition changes nothing:
 
@@ -140,7 +140,7 @@ fails closed — a refused transition changes nothing:
    signature covers the classification.
 
 ```python
-from acx_scenarios import (
+from gauntlet_scenarios import (
     Ed25519ReleaseSigner, ReleaseRegistry, classification_status,
     release, sign_release, validate_isolated, verify_release,
 )
@@ -200,7 +200,7 @@ is what the lifecycle's cleanup verifier walks after the pair.
 
 ## Fault adapters and conformance
 
-`acx_adapters` is the adapter interface and its conformance suite
+`gauntlet_adapters` is the adapter interface and its conformance suite
 (spec 8.2, 9.3, AC-028). An adapter MUST advertise its capabilities,
 its unsupported paths, its interception location, its side-effect
 semantics, and its cleanup guarantee, and it MUST pass the suite
