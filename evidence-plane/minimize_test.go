@@ -151,7 +151,7 @@ func TestRedactReportsUnchangedContent(t *testing.T) {
 func TestPreparePassesObjectRefsThroughUntouched(t *testing.T) {
 	minimizer := testMinimizer(t)
 	payload := EventPayload{
-		Kind: PayloadObjectRef,
+		Kind:        PayloadObjectRef,
 		StorageRef:  "obj://runs/run_0f1e2d3c4b5a6970/blob-1",
 		Digest:      "sha256:" + strings.Repeat("a1", 32),
 		SizeBytes:   4096,
@@ -229,7 +229,7 @@ func TestPrepareRedactsBeforeMeasuring(t *testing.T) {
 		t.Fatal(err)
 	}
 	payload := EventPayload{
-		Kind: PayloadInline,
+		Kind:    PayloadInline,
 		Content: "[redacted email] " + strings.Repeat("s", 600),
 	}
 	prepared := minimizer.Prepare(payload, DefaultRedactionRules())

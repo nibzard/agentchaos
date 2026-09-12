@@ -1107,7 +1107,7 @@
       "id": "T042",
       "title": "Add manifest and evidence parser fuzzing",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Fuzz security-sensitive manifests, verdicts, and evidence batches. Confirm unknown fields and malformed content fail closed.",
       "depends_on": [
         "T003",
@@ -1117,7 +1117,16 @@
       "tags": [
         "tests",
         "fuzzing"
-      ]
+      ],
+      "files": [
+        "control-plane/tests/test_fuzz_manifest.py",
+        "evidence-plane/fuzz_test.go",
+        "broker/fuzz_test.go",
+        "evidence-plane/minimize_test.go",
+        "broker/README.md",
+        "control-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T043",

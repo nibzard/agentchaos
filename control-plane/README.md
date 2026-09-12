@@ -256,3 +256,9 @@ cd control-plane && go test ./...
 The Go tests feed one result per label through the shared Python
 validator, so a classifier change that breaks the shared contract
 fails the Go suite.
+
+`tests/test_fuzz_manifest.py` fuzzes the manifest compiler (T042):
+hundreds of seeded structural and byte-level mutations per run. The
+compiler must answer with a compile or `CompileViolation` — never
+another exception — and an unknown key injected at any nesting depth
+is always refused.

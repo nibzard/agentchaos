@@ -383,3 +383,9 @@ cd broker && go test ./...
 go run ./cmd/brokerd            # serve on 127.0.0.1:8081
 go run ./cmd/brokerd -policy ./policy.json -addr :8081
 ```
+
+`fuzz_test.go` fuzzes the review verdict decoder (T042): seeded byte
+damage must never panic it, adversarial key names must fail closed,
+and a verdict smuggled past the decoder enum is caught by the review
+contract. The engine-backed target runs with
+`go test -fuzz=FuzzDecodeReview -fuzztime=30s`.
