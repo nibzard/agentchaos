@@ -22,6 +22,7 @@ from acx_compiler.plan import (
 )
 from acx_compiler.records import ResourceStore
 from acx_compiler.risk import RISK_ORDER, RiskPolicy, classify_risk
+from acx_compiler.selection import expand_selectors
 
 DEFAULT_GRANT_TTL_S = 300
 DEFAULT_POLICY = RiskPolicy()
@@ -67,9 +68,12 @@ def compile_manifest(
         store, manifest["treatment_profile_id"], "treatment", tenant_id, entries
     )
     scenarios = _resolve_scenarios(store, manifest, tenant_id, entries)
-    selector_results, target_classes = _expand_selectors(
-        store, manifest, tenant_id, entries
+    selection = expand_selectors(
+        manifest["selectors"], store, tenant_id=tenant_id, mode=mode
     )
+    entries.extend(selection.entries)
+    selector_results = selection.selectors
+    target_classes = set(selection.target_classes)
     _check_credentials(store, manifest, tenant_id, now, entries)
     _check_budgets(manifest, entries)
     _check_stop_rules(manifest, entries)
@@ -317,96 +321,6 @@ def _resolve_scenarios(
             )
         scenarios.append(scenario)
     return scenarios
-
-
-def _expand_selectors(
-    store: ResourceStore,
-    manifest: dict,
-    tenant_id: str,
-    entries: list[CompileErrorEntry],
-) -> tuple[list[dict], set[str]]:
-    """Expand selectors into explicit target lists.
-
-    Returns one result per selector plus the set of selected target
-    classes. Wildcards are not representable in the contract, so every
-    selection is an explicit enrolled set (spec 7, 13.1, AC-002).
-    """
-    results: list[dict] = []
-    seen: dict[str, str] = {}
-    classes: set[str] = set()
-    for index, selector in enumerate(manifest["selectors"]):
-        path = f"$.manifest.selectors[{index}]"
-        exclusions = set(selector.get("exclusions", []))
-        selected: list[str] = []
-        selected_classes: set[str] = set()
-        for position, target_id in enumerate(selector.get("target_ids") or []):
-            target_path = f"{path}.target_ids[{position}]"
-            target = store.get_target(target_id)
-            if target is None:
-                entries.append(
-                    CompileErrorEntry(
-                        "unknown_reference",
-                        f"target {target_id} not found",
-                        target_path,
-                    )
-                )
-                continue
-            if target.get("tenant_id") != tenant_id:
-                entries.append(
-                    CompileErrorEntry(
-                        "tenant_mismatch",
-                        f"target {target_id} belongs to tenant "
-                        f"{target.get('tenant_id')}, experiment belongs to "
-                        f"{tenant_id}",
-                        target_path,
-                    )
-                )
-                continue
-            if target.get("status") != "enrolled":
-                entries.append(
-                    CompileErrorEntry(
-                        "target_not_enrolled",
-                        f"target {target_id} has status "
-                        f"{target.get('status')}, only enrolled targets may "
-                        "be selected",
-                        target_path,
-                    )
-                )
-                continue
-            if target_id in exclusions:
-                continue
-            if target_id in seen:
-                entries.append(
-                    CompileErrorEntry(
-                        "duplicate_target",
-                        f"target {target_id} selected by {seen[target_id]} "
-                        f"and selector {index}",
-                        target_path,
-                    )
-                )
-                continue
-            seen[target_id] = f"selector {index}"
-            selected.append(target_id)
-            selected_classes.add(target.get("class", ""))
-        if not selected:
-            entries.append(
-                CompileErrorEntry(
-                    "empty_selection",
-                    "selector expands to an empty enrolled set; selectors "
-                    "must resolve to an explicit enrolled set and empty "
-                    "expansions fail closed",
-                    path,
-                )
-            )
-        classes.update(selected_classes)
-        results.append(
-            {
-                "selected": sorted(selected),
-                "excluded": sorted(exclusions),
-                "recorded_seed": selector["recorded_seed"],
-            }
-        )
-    return results, classes
 
 
 def _check_credentials(

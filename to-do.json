@@ -121,7 +121,7 @@
       "id": "T004",
       "title": "Implement enrollment and target selection",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Require explicit enrolled targets. Make selector expansion fail closed when targets are not enrolled or when production selection is ambiguous.",
       "depends_on": [
         "T003"
@@ -129,7 +129,26 @@
       "tags": [
         "control-plane",
         "security"
-      ]
+      ],
+      "files": [
+        "shared/schemas/target.schema.json",
+        "shared/schemas/registry.json",
+        "shared/fixtures/valid/target.json",
+        "shared/python/tests/conftest.py",
+        "shared/python/tests/test_registry.py",
+        "shared/python/tests/test_contracts.py",
+        "control-plane/acx_compiler/selection.py",
+        "control-plane/acx_compiler/enrollment.py",
+        "control-plane/acx_compiler/compiler.py",
+        "control-plane/acx_compiler/__init__.py",
+        "control-plane/acx_compiler/records.py",
+        "control-plane/tests/conftest.py",
+        "control-plane/tests/test_compiler.py",
+        "control-plane/tests/test_selection.py",
+        "control-plane/tests/test_enrollment.py",
+        "control-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:39:00Z"
     },
     {
       "id": "T005",

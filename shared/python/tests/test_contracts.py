@@ -42,6 +42,7 @@ def test_unknown_top_level_field_rejected(registry, valid_instances, kind):
         ("Effect", ["proposed_action", "arguments"], {"raw": "object"}),
         ("EvidenceEvent", ["payload", "inline_html"], "<script>"),
         ("AssuranceClaim", ["estimate", "weighted_counts"], [1, 2]),
+        ("Target", ["enrollment", "extension"], 1),
     ],
 )
 def test_unknown_nested_field_rejected(registry, valid_instances, kind, path, value):
@@ -282,6 +283,31 @@ def test_bad_timestamp_rejected(registry):
 
     with pytest.raises(ContractViolation):
         registry.validate(_mutated("Run", mutate), "Run")
+
+
+@pytest.mark.parametrize(
+    "kind,path",
+    [
+        ("Target", ["enrollment", "enrolled_at"]),
+    ],
+)
+def test_bad_resource_timestamp_rejected(registry, kind, path):
+    def mutate(instance):
+        node = instance
+        for key in path[:-1]:
+            node = node[key]
+        node[path[-1]] = "2026-09-01 10:00:00"
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated(kind, mutate), kind)
+
+
+def test_target_id_pattern_enforced(registry):
+    def mutate(instance):
+        instance["id"] = "target-1"
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
 
 
 def test_tenant_id_pattern_enforced(registry):
@@ -598,3 +624,99 @@ def test_customer_canary_requires_enrolled_identities(registry):
 
     with pytest.raises(ContractViolation):
         registry.validate(_mutated("Experiment", mutate), "Experiment")
+
+
+# Target contract (spec 7, 13.1, 13.4, AC-002).
+
+
+def test_enrolled_target_requires_enrollment_evidence(registry):
+    def mutate(instance):
+        del instance["enrollment"]
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_paused_target_keeps_enrollment_evidence(registry):
+    instance = _mutated("Target", lambda i: i.update(status="paused"))
+    registry.validate(instance, "Target")
+
+
+def test_unenrolled_target_drops_enrollment_evidence(registry):
+    def mutate(instance):
+        instance["status"] = "unenrolled"
+        del instance["enrollment"]
+        instance["unenrolled_at"] = "2026-09-10T08:00:00Z"
+
+    registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_unenrolled_target_requires_unenrolled_at(registry):
+    def mutate(instance):
+        instance["status"] = "unenrolled"
+        del instance["enrollment"]
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_unenrolled_target_cannot_carry_enrollment(registry):
+    """A stale enrollment block would keep dead opt-ins alive."""
+
+    def mutate(instance):
+        instance["status"] = "unenrolled"
+        instance["unenrolled_at"] = "2026-09-10T08:00:00Z"
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_enrolled_target_cannot_carry_unenrolled_at(registry):
+    def mutate(instance):
+        instance["unenrolled_at"] = "2026-09-10T08:00:00Z"
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_enrollment_evidence_is_attributable(registry):
+    def mutate(instance):
+        del instance["enrollment"]["enrolled_by"]
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_opt_in_modes_limited_to_production_modes(registry):
+    def mutate(instance):
+        instance["enrollment"]["opt_in_modes"] = ["isolated_reexecution"]
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_opt_in_modes_reject_duplicates(registry):
+    def mutate(instance):
+        instance["enrollment"]["opt_in_modes"] = [
+            "production_synthetic",
+            "production_synthetic",
+        ]
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_target_status_enum_is_closed(registry):
+    def mutate(instance):
+        instance["status"] = "suspended"
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")
+
+
+def test_target_class_pattern_is_kebab_case(registry):
+    def mutate(instance):
+        instance["class"] = "Synthetic Repo!"
+
+    with pytest.raises(ContractViolation):
+        registry.validate(_mutated("Target", mutate), "Target")

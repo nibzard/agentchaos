@@ -19,10 +19,40 @@ FIXTURE_DIR = REPO_ROOT / "shared" / "fixtures" / "valid"
 
 NOW = "2026-09-11T21:00:00Z"
 TENANT = "tnt_9d4c1e2a3b4f5c67"
+OTHER_TENANT = "tnt_ffffffffffffffff"
+OPERATOR = "act_platform-operator-01"
 
 
 def load_fixture(name: str) -> dict:
     return json.loads((FIXTURE_DIR / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def _target(
+    target_id: str = "tgt_4a5b6c7d8e9f0a1b",
+    *,
+    tenant_id: str = TENANT,
+    target_class: str = "synthetic-repo",
+    status: str = "enrolled",
+    opt_in_modes: tuple[str, ...] = ("production_synthetic",),
+) -> dict:
+    """A contract-valid Target record."""
+    record: dict = {
+        "kind": "Target",
+        "api_version": "v1",
+        "id": target_id,
+        "tenant_id": tenant_id,
+        "class": target_class,
+        "status": status,
+    }
+    if status in ("enrolled", "paused"):
+        record["enrollment"] = {
+            "enrolled_at": "2026-09-01T10:00:00Z",
+            "enrolled_by": OPERATOR,
+            "opt_in_modes": list(opt_in_modes),
+        }
+    else:
+        record["unenrolled_at"] = "2026-09-10T08:00:00Z"
+    return record
 
 
 def _baseline_profile() -> dict:
@@ -40,20 +70,8 @@ def _baseline_profile() -> dict:
 
 def _targets() -> list[dict]:
     return [
-        {
-            "kind": "Target",
-            "id": "tgt_4a5b6c7d8e9f0a1b",
-            "tenant_id": TENANT,
-            "class": "synthetic-repo",
-            "status": "enrolled",
-        },
-        {
-            "kind": "Target",
-            "id": "tgt_0f1e2d3c4b5a6978",
-            "tenant_id": TENANT,
-            "class": "synthetic-repo",
-            "status": "enrolled",
-        },
+        _target("tgt_4a5b6c7d8e9f0a1b"),
+        _target("tgt_0f1e2d3c4b5a6978"),
     ]
 
 

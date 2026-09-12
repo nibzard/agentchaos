@@ -4,9 +4,11 @@ The compiler never loads storage itself. Callers supply a store; the
 compiler treats a missing record as a failure. This keeps compilation
 deterministic and testable.
 
-Targets and credentials have no schema in shared/schemas yet. Their
-records carry the fields below and are checked in code. Every other
-record must validate against its contract in shared/schemas/.
+Targets validate against the Target contract in shared/schemas; the
+EnrollmentRegistry produces records that satisfy it. Credentials have no
+schema yet; their records carry the fields below and are checked in
+code. Every other record must validate against its contract in
+shared/schemas/.
 """
 
 from __future__ import annotations
@@ -32,8 +34,8 @@ class MemoryResourceStore:
     """In-memory store for tests and examples.
 
     Records are dicts:
-    - workload, profile, scenario: contract documents from shared/schemas.
-    - target: {"kind": "Target", "id", "tenant_id", "class", "status"}.
+    - workload, profile, scenario, target: contract documents from
+      shared/schemas.
     - credential: {"kind": "Credential", "id", "tenant_id", "credential_kind",
       "refreshed_at"}.
     """
@@ -47,7 +49,16 @@ class MemoryResourceStore:
         credentials: list[dict] | None = None,
     ):
         def index(records: list[dict] | None, key: str) -> dict:
-            return {r[key]: r for r in (records or [])}
+            indexed: dict = {}
+            for record in records or []:
+                if record[key] in indexed:
+                    raise ValueError(
+                        f"duplicate {key} {record[key]!r} in store; ids and "
+                        "credential kinds are unique across tenants, so a "
+                        "collision is ambiguous and fails closed"
+                    )
+                indexed[record[key]] = record
+            return indexed
 
         self._workloads = index(workloads, "id")
         self._profiles = index(profiles, "id")

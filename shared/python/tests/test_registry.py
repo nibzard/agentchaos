@@ -5,7 +5,7 @@ import pytest
 from acx_schemas.errors import UnknownResourceKind
 
 
-def test_registry_covers_all_ten_resources(registry):
+def test_registry_covers_every_resource(registry):
     expected = {
         "WorkloadVersion",
         "AutonomyProfile",
@@ -17,6 +17,7 @@ def test_registry_covers_all_ten_resources(registry):
         "EvidenceEvent",
         "Finding",
         "AssuranceClaim",
+        "Target",
     }
     assert set(registry.known_kinds) == expected
 

@@ -24,6 +24,7 @@ KIND_TO_FIXTURE = {
     "EvidenceEvent": "evidence-event.json",
     "Finding": "finding.json",
     "AssuranceClaim": "assurance-claim.json",
+    "Target": "target.json",
 }
 
 

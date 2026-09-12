@@ -68,6 +68,12 @@
       "file": "assurance-claim.schema.json",
       "$id": "https://agentchaos.invalid/schemas/v1/assurance-claim.schema.json",
       "resource_kind": "AssuranceClaim"
+    },
+    {
+      "name": "target",
+      "file": "target.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/target.schema.json",
+      "resource_kind": "Target"
     }
   ]
 }

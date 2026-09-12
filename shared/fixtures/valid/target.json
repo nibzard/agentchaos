@@ -1,0 +1,13 @@
+{
+  "kind": "Target",
+  "api_version": "v1",
+  "id": "tgt_4a5b6c7d8e9f0a1b",
+  "tenant_id": "tnt_9d4c1e2a3b4f5c67",
+  "class": "synthetic-repo",
+  "status": "enrolled",
+  "enrollment": {
+    "enrolled_at": "2026-09-01T10:00:00Z",
+    "enrolled_by": "act_platform-operator-01",
+    "opt_in_modes": ["production_synthetic"]
+  }
+}

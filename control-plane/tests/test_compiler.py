@@ -7,7 +7,15 @@ from acx_schemas import ContractViolation, validate
 
 from acx_compiler import CompileViolation, compile_manifest, verify_signature
 
-from conftest import NOW, build_store, draft_experiment, load_fixture, make_signer
+from conftest import (
+    NOW,
+    OTHER_TENANT,
+    _target,
+    build_store,
+    draft_experiment,
+    load_fixture,
+    make_signer,
+)
 
 
 def _codes(exc: CompileViolation) -> set[str]:
@@ -167,15 +175,7 @@ def test_scenario_ineligible_for_mode_rejected():
 
 
 def test_scenario_missing_target_class_entry_rejected():
-    targets = [
-        {
-            "kind": "Target",
-            "id": "tgt_4a5b6c7d8e9f0a1b",
-            "tenant_id": "tnt_9d4c1e2a3b4f5c67",
-            "class": "synthetic-web",
-            "status": "enrolled",
-        }
-    ]
+    targets = [_target(target_class="synthetic-web")]
     with pytest.raises(CompileViolation) as excinfo:
         _compile(draft_experiment(), build_store(targets=targets))
     assert "scenario_not_eligible" in _codes(excinfo.value)
@@ -201,15 +201,7 @@ def test_cross_tenant_scenario_rejected():
 
 
 def test_unenrolled_target_rejected():
-    targets = [
-        {
-            "kind": "Target",
-            "id": "tgt_4a5b6c7d8e9f0a1b",
-            "tenant_id": "tnt_9d4c1e2a3b4f5c67",
-            "class": "synthetic-repo",
-            "status": "paused",
-        }
-    ]
+    targets = [_target(status="paused")]
     with pytest.raises(CompileViolation) as excinfo:
         _compile(draft_experiment(), build_store(targets=targets))
     assert "target_not_enrolled" in _codes(excinfo.value)
@@ -438,15 +430,7 @@ def test_tenant_mismatch_rejected_everywhere(resource):
 
 
 def test_tenant_mismatch_target_and_credential_rejected():
-    targets = [
-        {
-            "kind": "Target",
-            "id": "tgt_4a5b6c7d8e9f0a1b",
-            "tenant_id": "tnt_ffffffffffffffff",
-            "class": "synthetic-repo",
-            "status": "enrolled",
-        }
-    ]
+    targets = [_target(tenant_id=OTHER_TENANT)]
     credentials = [
         {
             "kind": "Credential",
@@ -542,3 +526,104 @@ def test_signer_rejects_key_ids_outside_the_contract_pattern():
 
     with pytest.raises(ValueError):
         Ed25519Signer.generate("Key_Bad")
+
+
+# Enrollment and selection integration (task T004, AC-002).
+
+
+def test_target_record_without_enrollment_evidence_rejected():
+    """A status string alone no longer makes a target selectable."""
+    target = _target()
+    del target["enrollment"]
+    with pytest.raises(CompileViolation) as excinfo:
+        _compile(draft_experiment(), build_store(targets=[target]))
+    assert "record_schema_invalid" in _codes(excinfo.value)
+
+
+def test_unknown_exclusion_rejected():
+    """An exclusion naming nothing cannot be verified to exclude."""
+    experiment = draft_experiment()
+    experiment["manifest"]["selectors"][0]["exclusions"] = [
+        "tgt_0000000000000000"
+    ]
+    with pytest.raises(CompileViolation) as excinfo:
+        _compile(experiment)
+    assert "unknown_reference" in _codes(excinfo.value)
+
+
+def _production_workload():
+    workload = load_fixture("workload-version")
+    workload["supported_modes"] = ["production_synthetic"]
+    workload["environment"]["backend"] = "hardened_microvm"
+    return workload
+
+
+def _production_experiment():
+    experiment = draft_experiment()
+    experiment["manifest"]["mode"] = "production_synthetic"
+    experiment["manifest"]["identities"] = {
+        "kind": "synthetic_dedicated",
+        "max_sessions": 100,
+    }
+    return experiment
+
+
+def test_production_synthetic_without_opt_in_rejected():
+    targets = [
+        _target(opt_in_modes=()),
+        _target("tgt_0f1e2d3c4b5a6978"),
+    ]
+    with pytest.raises(CompileViolation) as excinfo:
+        _compile(
+            _production_experiment(),
+            build_store(workloads=[_production_workload()], targets=targets),
+        )
+    assert "target_not_opted_in" in _codes(excinfo.value)
+
+
+def test_production_synthetic_with_opt_in_compiles():
+    from acx_compiler import RiskPolicy
+
+    scenario = load_fixture("scenario-version")
+    scenario["mode_eligibility"].append(
+        {
+            "mode": "production_synthetic",
+            "target_class": "synthetic-repo",
+            "eligible": True,
+            "compatibility_evidence_digest": (
+                "sha256:" + "a" * 64
+            ),
+        }
+    )
+    result = _compile(
+        _production_experiment(),
+        build_store(
+            workloads=[_production_workload()], scenarios=[scenario]
+        ),
+        policy=RiskPolicy(max_risk="high"),
+    )
+    assert result.plan_document["selectors"][0]["selected"] == [
+        "tgt_4a5b6c7d8e9f0a1b"
+    ]
+
+
+def test_compiled_plan_selectors_feed_revalidation():
+    """The plan snapshot is the pre-injection reference (spec 7, 13.2)."""
+    from conftest import TENANT
+
+    from acx_compiler import revalidate_selection
+
+    result = _compile(draft_experiment())
+    selectors = draft_experiment()["manifest"]["selectors"]
+    store = build_store()
+    revalidate_selection(
+        selectors, result.plan_document["selectors"], store,
+        tenant_id=TENANT, mode="isolated_reexecution",
+    )
+    paused = build_store(targets=[_target(status="paused")])
+    with pytest.raises(CompileViolation) as excinfo:
+        revalidate_selection(
+            selectors, result.plan_document["selectors"], paused,
+            tenant_id=TENANT, mode="isolated_reexecution",
+        )
+    assert "target_not_enrolled" in _codes(excinfo.value)

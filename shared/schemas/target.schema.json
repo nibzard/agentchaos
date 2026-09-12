@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/target.schema.json",
+  "title": "Target",
+  "description": "An explicitly enrolled target environment (spec 7, 13.1, AC-002). A production environment is not automatically an eligible target: selection resolves only against records whose status is enrolled, and production modes additionally require the mode in the recorded opt-in list (spec 13.4).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "class",
+    "status"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Target"
+    },
+    "api_version": {
+      "$ref": "common.schema.json#/$defs/apiVersion"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/idTarget"
+    },
+    "tenant_id": {
+      "$ref": "common.schema.json#/$defs/tenantId"
+    },
+    "class": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "Target class that scenario mode eligibility keys on (spec 12.1), for example synthetic-repo."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unenrolled",
+        "enrolled",
+        "paused"
+      ],
+      "description": "Only enrolled targets may be selected. Paused suspends selection without revoking the enrollment record; unenrolled removes it."
+    },
+    "enrollment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enrolled_at",
+        "enrolled_by"
+      ],
+      "description": "Explicit enrollment evidence. Present exactly while the target is enrolled or paused; removed on unenrollment.",
+      "properties": {
+        "enrolled_at": {
+          "$ref": "common.schema.json#/$defs/utcTimestamp"
+        },
+        "enrolled_by": {
+          "$ref": "common.schema.json#/$defs/idActor",
+          "description": "Principal that performed the enrollment. Enrollment is a human-owned decision (spec 5.2)."
+        },
+        "opt_in_modes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "production_synthetic",
+              "customer_canary"
+            ]
+          },
+          "description": "Production modes the target owner explicitly allowed. Selection in a production mode fails closed when the mode is absent (spec 13.4 opt-in target selection)."
+        }
+      }
+    },
+    "unenrolled_at": {
+      "$ref": "common.schema.json#/$defs/utcTimestamp",
+      "description": "When the target left enrollment. Required exactly when status is unenrolled."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["enrolled", "paused"]
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "allOf": [
+          { "required": ["enrollment"] },
+          { "not": { "required": ["unenrolled_at"] } }
+        ]
+      },
+      "description": "An enrolled or paused target carries exactly one state marker: its enrollment evidence."
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "unenrolled" }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "allOf": [
+          { "required": ["unenrolled_at"] },
+          { "not": { "required": ["enrollment"] } }
+        ]
+      },
+      "description": "An unenrolled target carries no enrollment evidence: every recorded opt-in lapses on unenrollment."
+    }
+  ]
+}
