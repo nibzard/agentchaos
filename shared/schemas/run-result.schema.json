@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/run-result.schema.json",
+  "title": "RunResult",
+  "description": "Terminal classification of one run (spec 9.2). Unknown and untriggered cases stay separate from passes: an untriggered attack is never a successful defense, and insufficient evidence is never a pass.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "run_id",
+    "label",
+    "exit_code",
+    "injection",
+    "outcomes",
+    "reasons",
+    "decided_at"
+  ],
+  "properties": {
+    "kind": { "const": "RunResult" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": {
+      "type": "string",
+      "pattern": "^rrs_[a-z0-9]{8,64}$",
+      "description": "Run result id, rrs_ prefix."
+    },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "experiment_id": { "$ref": "common.schema.json#/$defs/idExperiment" },
+    "label": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "INCONCLUSIVE", "NOT_TRIGGERED", "HARNESS_ERROR"],
+      "description": "Spec 9.2 outcome labels. PASS requires every outcome assertion passed and the injection triggered when one was expected."
+    },
+    "exit_code": {
+      "type": "integer",
+      "enum": [0, 2, 3, 5],
+      "description": "Automation exit code (spec 20): 0 pass, 2 a declared gate failed, 3 insufficient evidence or inconclusive, 5 harness failure. Exit code 4 (invalid configuration) happens before a run exists and is never a run result."
+    },
+    "injection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "triggered"],
+      "properties": {
+        "expected": {
+          "type": "boolean",
+          "description": "The scenario declares a fault injection."
+        },
+        "triggered": {
+          "type": "boolean",
+          "description": "An injection receipt from outside the worker confirmed the injection fired (spec 9.3)."
+        }
+      }
+    },
+    "outcomes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "failed", "unknown"],
+      "properties": {
+        "passed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "description": "Outcome assertions independently verified as passed (spec 9.5)."
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "description": "Outcome assertions contradicted by authoritative evidence."
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "description": "Outcome assertions that stayed unknown: absent checks, errored checks, or grader-only support."
+        }
+      },
+      "description": "Verified outcome counts (spec 14.2: verified outcomes are reported separately from triggered ones)."
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+      "description": "Why this label and no other, in precedence order."
+    },
+    "outcome_report_id": {
+      "type": "string",
+      "pattern": "^ovr_[a-z0-9]{8,64}$",
+      "description": "The outcome report this classification consumed, when one exists."
+    },
+    "decided_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "label": { "const": "PASS" } },
+        "required": ["label"]
+      },
+      "then": {
+        "properties": {
+          "outcomes": {
+            "properties": {
+              "failed": { "const": 0 },
+              "unknown": { "const": 0 }
+            }
+          }
+        }
+      },
+      "description": "A pass with a failed or unknown outcome is not representable (spec 9.2)."
+    },
+    {
+      "if": {
+        "properties": { "label": { "const": "NOT_TRIGGERED" } },
+        "required": ["label"]
+      },
+      "then": {
+        "properties": {
+          "injection": {
+            "properties": { "expected": { "const": true }, "triggered": { "const": false } },
+            "required": ["expected", "triggered"]
+          }
+        }
+      },
+      "description": "NOT_TRIGGERED means an expected injection did not fire (spec 14.2)."
+    }
+  ]
+}

@@ -420,7 +420,7 @@
       "id": "T014",
       "title": "Implement run result classification",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Classify outcomes as pass, fail, inconclusive, not-triggered, or harness-error. Keep unknown and untriggered cases separate from passes.",
       "depends_on": [
         "T005",
@@ -429,7 +429,17 @@
       "tags": [
         "runner",
         "results"
-      ]
+      ],
+      "files": [
+        "control-plane/go.mod",
+        "control-plane/classification.go",
+        "control-plane/classification_test.go",
+        "control-plane/README.md",
+        "shared/schemas/run-result.schema.json",
+        "shared/schemas/registry.json",
+        "shared/python/tests/test_registry.py"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T015",

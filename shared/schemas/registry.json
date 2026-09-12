@@ -86,6 +86,12 @@
       "file": "outcome-report.schema.json",
       "$id": "https://agentchaos.invalid/schemas/v1/outcome-report.schema.json",
       "resource_kind": "OutcomeReport"
+    },
+    {
+      "name": "run-result",
+      "file": "run-result.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/run-result.schema.json",
+      "resource_kind": "RunResult"
     }
   ]
 }

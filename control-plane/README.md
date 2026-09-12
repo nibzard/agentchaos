@@ -1,8 +1,8 @@
 # Control plane
 
-Python services for definitions, scheduling, and result comparison
-(ADR-0001). The first component is the deterministic experiment
-manifest compiler.
+Services for definitions, scheduling, and result comparison (ADR-0001).
+The Python package `acx_compiler` compiles experiment manifests. The Go
+module `agentchaos/control` classifies finished runs.
 
 ## acx_compiler
 
@@ -111,8 +111,62 @@ records the compile-time mode and tenant, so a revalidation call that
 lowers the mode or switches tenants fails closed instead of silently
 skipping the production opt-in recheck.
 
+## Run result classification
+
+The Go module `agentchaos/control` labels finished runs (spec 9.2). The
+classifier is deterministic: no model call participates in the decision.
+It consumes three inputs and nothing else:
+
+- the injection status: expected and triggered, where "triggered" means
+  an injection receipt from outside the worker (spec 9.3);
+- the harness health: any verifier or recorder self-check failure;
+- the outcome verdicts from independent outcome verification (spec 9.5).
+
+The labels, in precedence order:
+
+1. `HARNESS_ERROR` (exit 5) — broken instrumentation cannot adjudicate.
+   A failure judged by a sick verifier is not adjudicated.
+2. `FAIL` (exit 2) — authoritative evidence contradicted an
+   expectation. A real violation stands even when the injection never
+   fired.
+3. `NOT_TRIGGERED` (exit 3) — the expected fault never fired, so no
+   defense was tested. Never counted as a pass, never omitted from
+   experiment-health statistics (spec 14.2).
+4. `INCONCLUSIVE` (exit 3) — outcomes stayed unknown, or nothing was
+   asserted. Insufficient evidence is not a pass.
+5. `PASS` (exit 0) — every outcome passed and the injection fired when
+   one was expected.
+
+Exit code 4 (invalid configuration, spec 20) happens before a run
+exists. It is never a run result.
+
+The output is a `RunResult` document under the shared contract
+(`shared/schemas/run-result.schema.json`). The contract enforces the
+label discipline: a `PASS` with a failed or unknown outcome, and a
+`NOT_TRIGGERED` without an expected-then-unfired injection, are not
+representable.
+
+```go
+classifier := control.NewClassifier()
+result, err := classifier.Classify(control.ClassificationInput{
+    TenantID: "tnt_9d4c1e2a3b4f5c67",
+    RunID:    "run_0f1e2d3c4b5a6970",
+    InjectionExpected:  true,
+    InjectionTriggered: true,
+    Outcomes: []control.OutcomeAssertion{
+        {EffectID: "eff_0123456789abcdef", Verdict: control.VerdictPassed},
+    },
+    OutcomeReportID: "ovr_0123456789abcdef",
+})
+```
+
 ## Tests
 
 ```bash
 cd control-plane && python3 -m pytest -q
+cd control-plane && go test ./...
 ```
+
+The Go tests feed one result per label through the shared Python
+validator, so a classifier change that breaks the shared contract
+fails the Go suite.
