@@ -261,7 +261,8 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request) {
 // delegate mints a child delegation after the narrowing rules
 // (spec 10, AC-008). Service and operator roles only: a worker never
 // mints capability for itself.
-func (s *Server) delegate(w http.ResponseWriter, r *http.Request) {	requestID := newRequestID()
+func (s *Server) delegate(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
 		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",

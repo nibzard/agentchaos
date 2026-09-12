@@ -57,13 +57,13 @@ func paymentEffect(id string) *Effect {
 
 func review(verdict string) *Review {
 	return &Review{
-		Verdict:       verdict,
-		ReviewerID:    "act_sentinel-reference-01",
-		PolicyRefs:    []string{"pol_1.1.0/operations.repo.push"},
-		EventRefs:     []string{"evt_" + strings.Repeat("1", 16)},
-		Rationale:     "the push matches the approved plan",
-		Limitations:   "reviewed the arguments digest only",
-		LatencyMS:     120,
+		Verdict:     verdict,
+		ReviewerID:  "act_sentinel-reference-01",
+		PolicyRefs:  []string{"pol_1.1.0/operations.repo.push"},
+		EventRefs:   []string{"evt_" + strings.Repeat("1", 16)},
+		Rationale:   "the push matches the approved plan",
+		Limitations: "reviewed the arguments digest only",
+		LatencyMS:   120,
 	}
 }
 
@@ -284,10 +284,13 @@ func TestMalformedReviewDecisionsAreRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	cases := map[string]*Review{
-		"verdict":   {Verdict: "MAYBE", ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: 1},
-		"reviewer":  {Verdict: ReviewAllow, ReviewerID: "worker-1", Rationale: "x", LatencyMS: 1},
-		"rationale": {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "", LatencyMS: 1},
-		"latency":   {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: -1},
+		"verdict":     {Verdict: "MAYBE", ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: 1},
+		"reviewer":    {Verdict: ReviewAllow, ReviewerID: "worker-1", Rationale: "x", LatencyMS: 1},
+		"rationale":   {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "", LatencyMS: 1},
+		"latency":     {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: -1},
+		"policy_refs": {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: 1, EventRefs: []string{"evt_" + strings.Repeat("1", 16)}},
+		"event_refs":  {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: 1, PolicyRefs: []string{"pol_1.1.0/operations.repo.push"}},
+		"bad_ref":     {Verdict: ReviewAllow, ReviewerID: "act_sentinel-reference-01", Rationale: "x", LatencyMS: 1, PolicyRefs: []string{"the push policy"}, EventRefs: []string{"event-42"}},
 	}
 	for name, bad := range cases {
 		_, _, err := broker.AttachReview(servicePrincipal(), held.ID, bad)
@@ -459,7 +462,7 @@ func TestReviewEndpointRoundTripAndGuards(t *testing.T) {
 
 	// A worker cannot attach the review that releases its own effect.
 	workerHeaders := map[string]string{
-		HeaderActor: "act_worker-reference-01",
+		HeaderActor:  "act_worker-reference-01",
 		HeaderTenant: testRun().TenantID,
 		HeaderRole:   RoleWorker,
 		HeaderIdem:   "idk_review-push-0001",
@@ -467,7 +470,9 @@ func TestReviewEndpointRoundTripAndGuards(t *testing.T) {
 	reply, problem := doJSON(t, "POST", server.URL+"/v1/effects/eff_"+"0a0b0c0d0e0f0113/review",
 		mustJSON(t, map[string]any{
 			"verdict": "ALLOW", "reviewer_id": "act_sentinel-reference-01",
-			"rationale": "matches the plan", "latency_ms": 90,
+			"policy_refs": []any{"pol_1.1.0/operations.repo.push"},
+			"event_refs":  []string{"evt_1111111111111111"},
+			"rationale":   "matches the plan", "latency_ms": 90,
 		}), workerHeaders)
 	if reply.StatusCode != http.StatusForbidden {
 		t.Fatalf("worker review: %d %+v", reply.StatusCode, problem)
@@ -477,7 +482,9 @@ func TestReviewEndpointRoundTripAndGuards(t *testing.T) {
 	reply, body = doJSON(t, "POST", server.URL+"/v1/effects/eff_"+"0a0b0c0d0e0f0113/review",
 		mustJSON(t, map[string]any{
 			"verdict": "ALLOW", "reviewer_id": "act_sentinel-reference-01",
-			"rationale": "matches the plan", "latency_ms": 90,
+			"policy_refs": []any{"pol_1.1.0/operations.repo.push"},
+			"event_refs":  []string{"evt_1111111111111111"},
+			"rationale":   "matches the plan", "latency_ms": 90,
 		}), reviewHeaders)
 	if reply.StatusCode != http.StatusOK {
 		t.Fatalf("review: %d %+v", reply.StatusCode, body)
@@ -493,7 +500,9 @@ func TestReviewEndpointRoundTripAndGuards(t *testing.T) {
 	reply, body = doJSON(t, "POST", server.URL+"/v1/effects/eff_"+"0a0b0c0d0e0f0113/review",
 		mustJSON(t, map[string]any{
 			"verdict": "ALLOW", "reviewer_id": "act_sentinel-reference-01",
-			"rationale": "matches the plan", "latency_ms": 90,
+			"policy_refs": []any{"pol_1.1.0/operations.repo.push"},
+			"event_refs":  []string{"evt_1111111111111111"},
+			"rationale":   "matches the plan", "latency_ms": 90,
 		}), reviewHeaders)
 	if reply.StatusCode != http.StatusOK ||
 		body["decision"].(map[string]any)["verdict"] != "allow" {

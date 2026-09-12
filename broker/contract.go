@@ -50,6 +50,7 @@ var (
 	reActorID   = regexp.MustCompile(`^act_[a-z0-9][a-z0-9-]{3,63}$`)
 	reSourceID  = regexp.MustCompile(`^src_[a-z0-9][a-z0-9-]{3,63}$`)
 	reEventID   = regexp.MustCompile(`^evt_[a-z0-9]{8,64}$`)
+	rePolicyRef = regexp.MustCompile(`^pol_[a-z0-9][a-z0-9.-]*/[a-z][a-z0-9._:/-]{1,252}$`)
 	reDigest    = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	reNonce     = regexp.MustCompile(`^[A-Za-z0-9_-]{16,128}$`)
 	reIdemKey   = regexp.MustCompile(`^idk_[A-Za-z0-9_-]{8,128}$`)
@@ -382,7 +383,9 @@ const (
 
 // ValidateReview checks a machine-review decision against the review
 // decision contract (spec 11.2): a verdict from the enum, a reviewer
-// identity, a rationale, and a non-negative latency.
+// identity, a rationale, a non-negative latency, and — AC-014 — the
+// policy it enforced and the source events it judged. A verdict
+// without references is unfalsifiable, so it never reaches a record.
 func (r *Review) ValidateReview() []ContractError {
 	var errs []ContractError
 	add := func(check, path, detail string) {
@@ -403,6 +406,28 @@ func (r *Review) ValidateReview() []ContractError {
 	}
 	if r.LatencyMS < 0 {
 		add("latency_ms", "$.review.latency_ms", "must be zero or more")
+	}
+	if len(r.PolicyRefs) < 1 {
+		add("policy_refs", "$.review.policy_refs",
+			"at least one policy reference is required (AC-014)")
+	}
+	for _, ref := range r.PolicyRefs {
+		if !rePolicyRef.MatchString(ref) {
+			add("policy_refs", "$.review.policy_refs",
+				"each entry must be a policy id and rule path, for example pol_1.1.0/operations.repo.push")
+			break
+		}
+	}
+	if len(r.EventRefs) < 1 {
+		add("event_refs", "$.review.event_refs",
+			"at least one source event reference is required (AC-014)")
+	}
+	for _, ref := range r.EventRefs {
+		if !reEventID.MatchString(ref) {
+			add("event_refs", "$.review.event_refs",
+				"each entry must match evt_[a-z0-9]{8,64}")
+			break
+		}
 	}
 	return errs
 }

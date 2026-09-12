@@ -94,8 +94,12 @@ well-formed `ALLOW` review arrives.
 (spec 11.2) and re-runs the deterministic decision. The body is a
 `Review` document: verdict (`ALLOW`, `WATCH`, `DENY`, or `ABSTAIN`),
 reviewer actor id, policy references, event references, rationale,
-limitations, and latency. Decoding is exact-key like proposals
-(AC-001); contract violations fail with 422 `review_schema`.
+limitations, and latency. Every verdict must cite at least one policy
+reference and one source event reference (AC-014) — a verdict without
+references is unfalsifiable and never reaches a record. Decoding is
+exact-key like proposals (AC-001); contract violations fail with 422
+`review_schema`. The `supervisor` module (T018) produces these
+decisions.
 
 - `ALLOW` re-runs the full decision pipeline — the gate, the stop
   fence, quarantine, compensation, and delegation narrowing — under

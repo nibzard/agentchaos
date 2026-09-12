@@ -523,7 +523,7 @@
       "id": "T018",
       "title": "Implement fast and contextual review contracts",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Return allow, watch, deny, or abstain with policy references, event references, rationale, limitations, model or prompt version, and latency.",
       "depends_on": [
         "T011",
@@ -532,6 +532,18 @@
       "tags": [
         "supervision",
         "review"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z",
+      "files": [
+        "supervisor/go.mod",
+        "supervisor/detector.go",
+        "supervisor/reviewer.go",
+        "supervisor/supervisor.go",
+        "supervisor/supervisor_test.go",
+        "supervisor/README.md",
+        "broker/contract.go",
+        "broker/gates_test.go",
+        "broker/README.md"
       ]
     },
     {
