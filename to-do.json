@@ -1345,7 +1345,7 @@
       "id": "T050",
       "title": "Implement fleet trajectory analysis",
       "priority": 4,
-      "status": "todo",
+      "status": "done",
       "details": "Find synthetic cross-run communication patterns across sessions while preserving provenance and tenant isolation.",
       "depends_on": [
         "T011",
@@ -1355,7 +1355,15 @@
       "tags": [
         "p1",
         "analysis"
-      ]
+      ],
+      "files": [
+        "analysis/fleet.go",
+        "analysis/fleet_test.go",
+        "analysis/README.md",
+        "integration/fleet_test.go",
+        "integration/go.mod"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T051",

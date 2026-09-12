@@ -112,3 +112,35 @@ report, err := analysis.ExportReport(input)
 machine, err := analysis.RenderJSON(report)
 readable := analysis.RenderText(report)
 ```
+
+## Fleet trajectory analysis
+
+`AnalyzeFleet` (T050, spec 10.1, AC-030) is the P1 review layer that
+works across sessions. It reads cross-session metadata and identities
+— never raw payloads, only digests and storage references — and finds
+cross-run communication patterns: runs that share a delegation
+identity, an artifact, a correlation id, or direct event lineage.
+Transitively linked runs form one campaign pattern.
+
+Every edge cites the event ids it was built from, sorted, with the
+trust labels those events carried; `AssertFleetProvenance` lets a
+consumer refuse a report whose citations dangle. A pattern is a set
+of cited edges between runs, not a verdict about intent; the scope
+note says so and travels with every report.
+
+Isolation is structural: one analysis covers exactly one tenant.
+Input that mixes tenants is refused whole, so no cross-tenant edge
+can be constructed. Delivery is at-least-once, so duplicate event ids
+are dropped and counted, never double-linked.
+
+`FleetEvent` mirrors the EvidenceEvent contract's JSON tags, so
+authoritative evidence events unmarshal into the analyzer's input
+as-is; the integration suite proves recorded evidence flows through
+end to end.
+
+```go
+report, err := analysis.AnalyzeFleet(events)   // one tenant's events
+err = analysis.AssertFleetProvenance(report, events)
+```
+
+Output is deterministic: the same input yields byte-identical JSON.

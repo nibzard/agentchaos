@@ -3,6 +3,7 @@ module gauntlet/integration
 go 1.22
 
 require (
+	gauntlet/analysis v0.0.0
 	gauntlet/api v0.0.0
 	gauntlet/broker v0.0.0
 	gauntlet/control v0.0.0
@@ -22,3 +23,5 @@ replace gauntlet/evidence => ../evidence-plane
 replace gauntlet/governor => ../governor
 
 replace gauntlet/supervisor => ../supervisor
+
+replace gauntlet/analysis => ../analysis
