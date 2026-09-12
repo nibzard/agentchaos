@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 const testNow = "2026-09-12T10:00:00Z"
@@ -19,10 +20,13 @@ func testPolicy(t *testing.T) *Policy {
 
 func testRun() *RunContext {
 	return &RunContext{
-		RunID:          "run_" + "0f1e2d3c4b5a6970",
-		TenantID:       "tnt_9d4c1e2a3b4f5c67",
-		TaskID:         "task_fixture-close-issue",
-		GrantExpiresAt: "2026-09-12T10:30:00Z",
+		RunID:    "run_" + "0f1e2d3c4b5a6970",
+		TenantID: "tnt_9d4c1e2a3b4f5c67",
+		TaskID:   "task_fixture-close-issue",
+		// Derived from the clock, not a fixed date: a fixed future
+		// timestamp rots into an expired grant and fails the suite.
+		GrantExpiresAt: time.Now().UTC().Add(24 * time.Hour).
+			Format("2006-01-02T15:04:05Z"),
 		AllowedClasses: []string{ClassA1, ClassA2},
 	}
 }

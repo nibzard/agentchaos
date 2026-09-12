@@ -286,7 +286,7 @@
       "id": "T009",
       "title": "Implement the independent safety governor",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Enforce short-lived grants, heartbeats, selectors, budgets, trip conditions, emergency fencing, and cleanup handoff outside the worker environment.",
       "depends_on": [
         "T003",
@@ -295,7 +295,23 @@
       "tags": [
         "governor",
         "security"
-      ]
+      ],
+      "files": [
+        "governor/go.mod",
+        "governor/contract.go",
+        "governor/governor.go",
+        "governor/events.go",
+        "governor/handoff.go",
+        "governor/server.go",
+        "governor/cmd/governord/main.go",
+        "governor/governor_test.go",
+        "governor/http_test.go",
+        "governor/regression_test.go",
+        "governor/crosslang_test.go",
+        "governor/README.md",
+        "broker/policy_test.go"
+      ],
+      "updated_at": "2026-09-12T10:45:00Z"
     },
     {
       "id": "T010",
