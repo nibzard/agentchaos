@@ -51,3 +51,31 @@ comparison, err := analysis.Compare(attempts)
 
 The result marshals to JSON with denominators, paired differences,
 and limitations attached.
+
+## Cost accounting
+
+`AccountCosts` (T025, spec 16) aggregates `CostEntry` values —
+micro-units keyed by workload version, control profile, and task —
+into a `CostReport` with six components per profile:
+
+| Component | Covers |
+| --- | --- |
+| `worker` | the worker's own compute |
+| `retry` | re-execution after holds, failures, and timeouts |
+| `monitoring` | detectors and collectors |
+| `storage` | evidence retention |
+| `review` | contextual, full-call, and session review |
+| `experiment` | injection setup and failed experiments |
+
+Every component keeps a row at zero; shares sum to one only where the
+profile cost anything. Supervision overhead (spec 16) is the absolute
+`extra_micros` against the matched `hard-controls-only` baseline
+first, the ratio second. A workload without baseline entries reports
+`baseline_missing` and a limitation — its overhead is not measured,
+never zero — and the ledger refuses unknown components, negative
+amounts, and anonymous workloads.
+
+```go
+report, err := analysis.AccountCosts(entries)
+```
+

@@ -683,7 +683,7 @@
       "id": "T025",
       "title": "Implement cost and resource accounting",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Report worker, retry, monitoring, storage, review, and experiment costs by workload and control profile.",
       "depends_on": [
         "T005",
@@ -692,7 +692,13 @@
       "tags": [
         "cost",
         "metrics"
-      ]
+      ],
+      "files": [
+        "analysis/cost.go",
+        "analysis/cost_test.go",
+        "analysis/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T026",
