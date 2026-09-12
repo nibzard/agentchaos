@@ -597,7 +597,7 @@
       "id": "T021",
       "title": "Implement profile comparison",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Compare hard-controls-only, classifier-assisted, contextual review, full-call review, and session review profiles with matched workloads and separate utility, safety, latency, and cost metrics.",
       "depends_on": [
         "T014",
@@ -607,6 +607,13 @@
       "tags": [
         "analysis",
         "profiles"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z",
+      "files": [
+        "analysis/go.mod",
+        "analysis/profile.go",
+        "analysis/profile_test.go",
+        "analysis/README.md"
       ]
     },
     {
