@@ -945,7 +945,7 @@
       "id": "T041",
       "title": "Add integration and fault tests",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Test adapters, effect receipts, storage faults, queue faults, clock issues, reviewer outages, cleanup failures, dishonest transcripts, bypass attempts, unknown effects, and verifier failures.",
       "depends_on": [
         "T010",
@@ -957,6 +957,13 @@
       "tags": [
         "tests",
         "faults"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z",
+      "files": [
+        "integration/go.mod",
+        "integration/harness_test.go",
+        "integration/faults_test.go",
+        "integration/README.md"
       ]
     },
     {
