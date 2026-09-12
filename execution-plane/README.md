@@ -279,6 +279,50 @@ Honest scope: the generator is a seeded constructor, not a model. The
 deliverable is the pipeline discipline that a model-driven generator
 plugs into.
 
+## Real-customer canaries, designed
+
+`gauntlet_scenarios.canary` is the customer-canary mode (T055, spec 7
+and 17, AC-035): "opt-in, narrowly reversible changes to real workload
+behavior" behind their own gate — the risk table keeps production
+impact "synthetic only until separate canary gate." Six rules, each
+checkable:
+
+- **Opt-in primitive classes.** A closed `CanaryClassRegistry` of four
+  narrow classes (`cpc_response-delay`, `cpc_transient-error`,
+  `cpc_flag-flip`, `cpc_traffic-shift`). Every class declares its
+  reversal kind, numeric effect limits, and per-class caps for
+  targets, duration, and applications. A class without effect limits
+  is not registrable.
+- **Consent per class.** `ConsentLedger` records consent per tenant
+  per class, scoped to explicit targets and bound to the digest of the
+  class limits. Limit drift stales the consent; revocation is checked
+  again before every application.
+- **Explicit targets.** `CanaryTargets` enrollment resolves selectors;
+  there are no wildcards, and a target revoked since admission fails
+  the next application closed.
+- **Independently verified effect limits.** Admission demands
+  containment evidence that passed, bound by digest to the class
+  definition and primitive version, and carrying the exact limits the
+  tests verified — asserted limits do not count (AC-035).
+- **Automatic stop rules.** Numeric and preregistered at admission.
+  `evaluate_stop` is mechanical: error-rate and latency deltas stop
+  the canary; an unauthorized effect or a reversal outside its grace
+  window stops and fences the class for the tenant. Clearing a fence
+  needs a reason.
+- **Reversal verified from outside.** `verify_reversal` judges state
+  readings against the class's reversal kind — flag registry values,
+  routing fractions, observed next-call behavior — never the canary's
+  own claim. A missing or contradicting reading fences the class.
+
+Admission builds the residual-risk document: worst-case blast radius,
+what reversal verification cannot prove, and the statement that a
+canary result is not a production assurance certificate. A named
+operator must acknowledge it. `assess` runs the three gates — opt-in,
+containment, reversal — and passed means all three.
+
+Honest scope: nothing here touches a real customer workload. The
+deliverable is the contract a real path plugs into.
+
 ## Fault adapters and conformance
 
 `gauntlet_adapters` is the adapter interface and its conformance suite

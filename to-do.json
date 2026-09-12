@@ -1460,7 +1460,7 @@
       "id": "T055",
       "title": "Design real-customer canary support",
       "priority": 5,
-      "status": "todo",
+      "status": "done",
       "details": "Define opt-in primitive classes, reversible semantics, target selection, automatic stop rules, tested containment, and residual-risk documentation for later real-customer canaries.",
       "depends_on": [
         "T049"
@@ -1468,7 +1468,14 @@
       "tags": [
         "p2",
         "canary"
-      ]
+      ],
+      "files": [
+        "execution-plane/gauntlet_scenarios/canary.py",
+        "execution-plane/gauntlet_scenarios/__init__.py",
+        "execution-plane/tests/test_canary.py",
+        "execution-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     }
   ]
 }
