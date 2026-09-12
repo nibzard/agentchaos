@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/evidence-event.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/evidence-event.schema.json",
   "title": "EvidenceEvent",
   "description": "Source-authenticated observation in the authoritative evidence store (spec 18.1, 9.4). Immutable; corrections link to originals. Worker claims, collector facts, and monitor interpretations stay distinguishable through trust labels (AC-012).",
   "type": "object",

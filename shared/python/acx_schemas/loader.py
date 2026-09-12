@@ -1,4 +1,4 @@
-"""Load the AgentChaos contract registry and build validators.
+"""Load the Gauntlet contract registry and build validators.
 
 The registry file shared/schemas/registry.json lists every contract.
 Each resource schema declares its resource kind through a ``kind``

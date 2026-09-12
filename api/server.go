@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"strings"
 
-	"agentchaos/control"
-	"agentchaos/evidence"
-	"agentchaos/governor"
+	"gauntlet/control"
+	"gauntlet/evidence"
+	"gauntlet/governor"
 )
 
 // Server is the beta API monolith (spec 8.1, 18.2, T026, T027). The

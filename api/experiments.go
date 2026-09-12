@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"agentchaos/governor"
+	"gauntlet/governor"
 )
 
 // Experiment statuses from the Experiment contract: draft to compiled

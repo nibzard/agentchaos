@@ -18,7 +18,7 @@ def test_every_registered_schema_is_strict(registry):
 def test_strictness_catches_an_open_object(registry):
     """A schema with an open object shape must fail the walk."""
     bad = {
-        "$id": "https://agentchaos.invalid/schemas/v1/bad.schema.json",
+        "$id": "https://gauntlet.invalid/schemas/v1/bad.schema.json",
         "type": "object",
         "properties": {"a": {"type": "string"}},
     }
@@ -28,7 +28,7 @@ def test_strictness_catches_an_open_object(registry):
 
 def test_strictness_catches_true_additional_properties(registry):
     bad = {
-        "$id": "https://agentchaos.invalid/schemas/v1/bad.schema.json",
+        "$id": "https://gauntlet.invalid/schemas/v1/bad.schema.json",
         "type": "object",
         "additionalProperties": False,
         "properties": {
@@ -41,7 +41,7 @@ def test_strictness_catches_true_additional_properties(registry):
 
 def test_strictness_catches_format_keyword(registry):
     bad = {
-        "$id": "https://agentchaos.invalid/schemas/v1/bad.schema.json",
+        "$id": "https://gauntlet.invalid/schemas/v1/bad.schema.json",
         "type": "object",
         "additionalProperties": False,
         "properties": {"a": {"type": "string", "format": "date-time"}},
@@ -52,7 +52,7 @@ def test_strictness_catches_format_keyword(registry):
 
 def test_strictness_catches_required_without_property(registry):
     bad = {
-        "$id": "https://agentchaos.invalid/schemas/v1/bad.schema.json",
+        "$id": "https://gauntlet.invalid/schemas/v1/bad.schema.json",
         "type": "object",
         "additionalProperties": False,
         "required": ["missing"],

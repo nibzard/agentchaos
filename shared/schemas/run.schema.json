@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/run.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/run.schema.json",
   "title": "Run",
   "description": "One execution attempt of an experiment variant with its environment, profiles, injections, and results (spec 18.1, 9.2). State transitions are append-only.",
   "type": "object",

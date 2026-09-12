@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/experiment.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/experiment.schema.json",
   "title": "Experiment",
   "description": "A compiled experiment definition and its target set (spec 18.1). The manifest is the strict compiler input from spec 9.1 and 13.1. Draft experiments are editable; an executed revision is immutable.",
   "type": "object",

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"agentchaos/broker"
+	"gauntlet/broker"
 )
 
 func main() {

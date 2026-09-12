@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/target.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/target.schema.json",
   "title": "Target",
   "description": "An explicitly enrolled target environment (spec 7, 13.1, AC-002). A production environment is not automatically an eligible target: selection resolves only against records whose status is enrolled, and production modes additionally require the mode in the recorded opt-in list (spec 13.4).",
   "type": "object",

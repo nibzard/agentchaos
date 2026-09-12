@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/effect.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/effect.schema.json",
   "title": "Effect",
   "description": "A proposed external effect with its bound authorization, dispatch, and receipt (spec 18.1, 10). Append-only lifecycle: PROPOSED to DENIED, or PROPOSED to AUTHORIZED to PREPARED to COMMITTING to COMMITTED, with EXPIRED, CANCELLED, UNKNOWN_EFFECT, and COMPENSATING as exceptional states.",
   "type": "object",

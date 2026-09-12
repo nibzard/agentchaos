@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/workload-version.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/workload-version.schema.json",
   "title": "WorkloadVersion",
   "description": "Immutable versioned fingerprint of a harness, model, tool set, and execution environment (spec 18.1). One denominator unit for experiments and assurance claims.",
   "type": "object",

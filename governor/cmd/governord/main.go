@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"agentchaos/governor"
+	"gauntlet/governor"
 )
 
 func main() {

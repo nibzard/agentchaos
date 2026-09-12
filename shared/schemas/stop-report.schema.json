@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/stop-report.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/stop-report.schema.json",
   "title": "StopReport",
   "description": "Execution record of the stop protocol (spec 13.3, 18.1). Append-only per run: a second stop replays this report. The terminal state arrives only from cleanup verification, never from worker exit; reopened marks a late event that made prior assurance stale.",
   "type": "object",

@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"agentchaos/evidence"
+	"gauntlet/evidence"
 )
 
 func main() {

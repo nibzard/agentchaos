@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"agentchaos/broker"
-	"agentchaos/control"
-	"agentchaos/evidence"
-	"agentchaos/governor"
+	"gauntlet/broker"
+	"gauntlet/control"
+	"gauntlet/evidence"
+	"gauntlet/governor"
 )
 
 // The fixtures mirror control-plane/tests/conftest.py: the same shared

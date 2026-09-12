@@ -1,6 +1,6 @@
 # acx-schemas
 
-Strict contract schemas and a fail-closed validator for AgentChaos
+Strict contract schemas and a fail-closed validator for Gauntlet
 resources.
 
 - Schemas live in `../schemas/` (JSON Schema draft 2020-12).

@@ -1,3 +1,3 @@
-module agentchaos/governor
+module gauntlet/governor
 
 go 1.22

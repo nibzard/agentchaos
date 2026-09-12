@@ -74,7 +74,7 @@ tell an intentional delegation from a gap.
   seconds. Clock uncertainty is a separate field on evidence events.
 - Digests: `sha256:` plus 64 lowercase hex characters.
 - Money: integer micro-units with an ISO-4217 currency code.
-- Contract URIs: `https://agentchaos.invalid/schemas/v1/...`. The
+- Contract URIs: `https://gauntlet.invalid/schemas/v1/...`. The
   reserved `.invalid` top-level domain marks a working-name product
   whose public naming is unresolved (spec S01).
 

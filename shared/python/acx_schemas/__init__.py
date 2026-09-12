@@ -1,4 +1,4 @@
-"""Strict contract validation for AgentChaos resources.
+"""Strict contract validation for Gauntlet resources.
 
 Loads the JSON Schema contracts from shared/schemas and validates
 resource instances fail-closed: unknown fields, unknown contract

@@ -2,7 +2,7 @@
 
 Services for definitions, scheduling, and result comparison (ADR-0001).
 The Python package `acx_compiler` compiles experiment manifests. The Go
-module `agentchaos/control` classifies finished runs.
+module `gauntlet/control` classifies finished runs.
 
 ## acx_compiler
 
@@ -113,7 +113,7 @@ skipping the production opt-in recheck.
 
 ## Run result classification
 
-The Go module `agentchaos/control` labels finished runs (spec 9.2). The
+The Go module `gauntlet/control` labels finished runs (spec 9.2). The
 classifier is deterministic: no model call participates in the decision.
 It consumes three inputs and nothing else:
 

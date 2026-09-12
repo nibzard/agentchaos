@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/outcome-report.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/outcome-report.schema.json",
   "title": "OutcomeReport",
   "description": "Independent outcome verification for one run's effects (spec 9.5). Verdicts come from external state, service receipts, deterministic fixtures, or independently tested graders — never from the worker's final text. Unknown outcomes remain unknown.",
   "type": "object",

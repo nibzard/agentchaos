@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 
-	"agentchaos/control"
+	"gauntlet/control"
 )
 
 // claimStore holds computed assurance claims, tenant-scoped. A

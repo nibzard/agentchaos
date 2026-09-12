@@ -1,3 +1,3 @@
-module agentchaos/control
+module gauntlet/control
 
 go 1.22

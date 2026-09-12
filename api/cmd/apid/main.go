@@ -13,10 +13,10 @@ import (
 	"os"
 	"strings"
 
-	"agentchaos/api"
-	"agentchaos/control"
-	"agentchaos/evidence"
-	"agentchaos/governor"
+	"gauntlet/api"
+	"gauntlet/control"
+	"gauntlet/evidence"
+	"gauntlet/governor"
 )
 
 func main() {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/delegation.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/delegation.schema.json",
   "title": "Delegation",
   "description": "Parent-to-child capability delegation (spec 18.1, 10). Children can only narrow capabilities and share the parent's cumulative budget. Attenuation or revocation only; widening is not representable.",
   "type": "object",

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-AgentChaos starts as a developer and security testing product for autonomous
+Gauntlet starts as a developer and security testing product for autonomous
 agent systems. The product specification requires these major parts:
 
 - A control plane for definitions, scheduling, result comparison, and claims.

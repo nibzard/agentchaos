@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/assurance-claim.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/assurance-claim.schema.json",
   "title": "AssuranceClaim",
   "description": "A scoped empirical conclusion with its assumptions (spec 18.1, 14.1). Immutable revisions that may become stale. A claim is a statement about a defined outcome for a defined workload and versioned system, never a judgment about model character.",
   "type": "object",

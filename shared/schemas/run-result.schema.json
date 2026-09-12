@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/run-result.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/run-result.schema.json",
   "title": "RunResult",
   "description": "Terminal classification of one run (spec 9.2). Unknown and untriggered cases stay separate from passes: an untriggered attack is never a successful defense, and insufficient evidence is never a pass.",
   "type": "object",

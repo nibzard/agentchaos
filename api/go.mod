@@ -1,18 +1,18 @@
-module agentchaos/api
+module gauntlet/api
 
 go 1.22
 
 require (
-	agentchaos/broker v0.0.0
-	agentchaos/control v0.0.0
-	agentchaos/evidence v0.0.0
-	agentchaos/governor v0.0.0
+	gauntlet/broker v0.0.0
+	gauntlet/control v0.0.0
+	gauntlet/evidence v0.0.0
+	gauntlet/governor v0.0.0
 )
 
-replace agentchaos/broker => ../broker
+replace gauntlet/broker => ../broker
 
-replace agentchaos/control => ../control-plane
+replace gauntlet/control => ../control-plane
 
-replace agentchaos/evidence => ../evidence-plane
+replace gauntlet/evidence => ../evidence-plane
 
-replace agentchaos/governor => ../governor
+replace gauntlet/governor => ../governor

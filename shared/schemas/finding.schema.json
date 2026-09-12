@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/finding.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/finding.schema.json",
   "title": "Finding",
   "description": "A policy violation, anomaly, evidence gap, or uncertain result with versioned adjudication (spec 18.1). Every serious finding carries raw evidence and an independent outcome reference (spec 22.2, B8).",
   "type": "object",

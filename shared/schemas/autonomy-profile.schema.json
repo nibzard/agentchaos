@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/autonomy-profile.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/autonomy-profile.schema.json",
   "title": "AutonomyProfile",
   "description": "Immutable published policy and supervision configuration (spec 18.1). Profiles under comparison: hard-controls-only, classifier-assisted, contextual review, full-call review, and session review (spec 15.3).",
   "type": "object",

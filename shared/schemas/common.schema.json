@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/common.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/common.schema.json",
   "title": "Common contract definitions",
-  "description": "Shared types for all AgentChaos resource contracts. Every resource schema references these definitions. Identifier and enum conventions are recorded in docs/architecture/0002-contract-conventions.md. The .invalid top-level domain marks a working-name product whose public naming is unresolved (spec S01).",
+  "description": "Shared types for all Gauntlet resource contracts. Every resource schema references these definitions. Identifier and enum conventions are recorded in docs/architecture/0002-contract-conventions.md. The .invalid top-level domain marks a working-name product; the name is cleared in ADR-0003.",
   "type": "object",
   "additionalProperties": false,
   "$defs": {

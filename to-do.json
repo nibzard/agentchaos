@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "project": {
-    "name": "AgentChaos",
+    "name": "Gauntlet",
     "root": "."
   },
   "source_files": [
-    "AgentChaos_Product_Spec_v0.1.md"
+    "docs/AgentChaos_Product_Spec_v0.1.md"
   ],
   "tasks": [
     {
@@ -991,10 +991,40 @@
       "id": "T046",
       "title": "Resolve name and license readiness",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Clear the working name before public release. Review third-party licenses and avoid implying affiliation with the existing AgentChaos repository.",
+      "files": [
+        "docs/architecture/0003-name-and-license.md",
+        "docs/architecture/0001-initial-stack-and-layout.md",
+        "docs/architecture/0002-contract-conventions.md",
+        "LICENSE",
+        "THIRD_PARTY.md",
+        "README.md",
+        "governor/go.mod",
+        "broker/go.mod",
+        "control-plane/go.mod",
+        "evidence-plane/go.mod",
+        "api/go.mod",
+        "shared/schemas/",
+        "shared/python/README.md"
+      ],
       "tags": [
         "legal",
+        "release"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
+    },
+    {
+      "id": "T056",
+      "title": "Retire the acx wire namespace prefix",
+      "priority": 3,
+      "status": "todo",
+      "details": "Rename the acx prefix (X-ACX headers, acx1 token version, acx_compiler, acx_runner, acx_schemas, the reserved CLI name) once the rename can land atomically. Must land before any public API compatibility promise (ADR-0003).",
+      "depends_on": [
+        "T046"
+      ],
+      "tags": [
+        "naming",
         "release"
       ]
     },

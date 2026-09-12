@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentchaos.invalid/schemas/v1/scenario-version.schema.json",
+  "$id": "https://gauntlet.invalid/schemas/v1/scenario-version.schema.json",
   "title": "ScenarioVersion",
   "description": "Immutable signed version of a fault scenario (spec 18.1, 12.1). Lifecycle: draft, isolated validation, signed release, compatibility tests, then eligibility for defined modes.",
   "type": "object",

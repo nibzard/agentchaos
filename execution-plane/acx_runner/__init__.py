@@ -1,4 +1,4 @@
-"""Local fixture runner for AgentChaos experiments (spec 9.2).
+"""Local fixture runner for Gauntlet experiments (spec 9.2).
 
 Public surface:
 
