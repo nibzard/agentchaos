@@ -43,6 +43,7 @@ POST /v1/delegations[...]               broker proxy
 GET  /v1/quarantine                     broker proxy
 POST /v1/assurance-claims               assess a fixed cohort
 GET  /v1/assurance-claims/{id}          read a claim
+POST /v1/assurance-claims/invalidations mark stale claims (spec 14.7)
 POST /v1/safety-levers/{scope}/engage   fence tenant or experiment
 GET  /healthz                           liveness
 ```
@@ -93,6 +94,32 @@ Roles:
   events or issue effect permits under any identity but its own.
 - Safety levers engage and never disengage. No route relaxes a fence;
   fences lift only through the governor's reviewed cleanup path.
+
+## Error contract
+
+Every failure on every plane — API-owned, evidence, and the broker
+behind the proxy — returns one envelope (spec 18.3):
+
+```json
+{"code": "idempotency_conflict", "message": "...", "retryable": false,
+ "request_id": "req_..."}
+```
+
+- The code is stable and machine-readable; clients branch on it, never
+  on the message.
+- The message is safe: what went wrong, never credentials, tokens, or
+  reviewer internals. `contract_test.go` plants a secret in failing
+  bodies and asserts no reply echoes it.
+- `retryable` is false except where a retry can succeed (for example
+  a key still executing: `idempotency_pending`).
+- `request_id` is fresh per call, so every reply is correlatable.
+
+The same suite pins the idempotency contract end to end: all ten
+mutation surfaces refuse a request without a key before touching
+state, reuse with a different body digest conflicts on the API, the
+evidence plane, and the broker, and the reply ledger itself has direct
+unit tests for replay, conflict, tenant scoping, concurrent callers
+(`-race`), and release-after-failure.
 
 ## Experiment lifecycle
 

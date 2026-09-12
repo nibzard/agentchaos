@@ -760,7 +760,7 @@
       "id": "T028",
       "title": "Implement API idempotency and error contracts",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Require idempotency keys for mutations. Reject reuse with a different body digest. Return stable error codes, safe messages, retryability, and request IDs.",
       "depends_on": [
         "T026"
@@ -768,7 +768,13 @@
       "tags": [
         "api",
         "reliability"
-      ]
+      ],
+      "files": [
+        "api/idempotency_test.go",
+        "api/contract_test.go",
+        "api/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T029",
