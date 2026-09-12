@@ -980,7 +980,7 @@
       "id": "T037",
       "title": "Implement raw payload minimization and retention",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Minimize and redact captured content before it leaves the execution plane. Support retention windows, tombstones, payload deletion, and legal holds.",
       "depends_on": [
         "T011"
@@ -988,7 +988,16 @@
       "tags": [
         "privacy",
         "evidence"
-      ]
+      ],
+      "files": [
+        "evidence-plane/minimize.go",
+        "evidence-plane/minimize_test.go",
+        "evidence-plane/retention.go",
+        "evidence-plane/retention_test.go",
+        "evidence-plane/recorder.go",
+        "evidence-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T038",

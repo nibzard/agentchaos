@@ -135,6 +135,36 @@ storage reference, so the evidence still names what existed and
 `verify` still passes (spec 19). Inline and metadata-only payloads
 have nothing to delete.
 
+## Retention windows and legal holds
+
+`retention.go` (T037) replaces the single horizon with the two
+windows the store enforces: `RawPayloads` (seven days by default)
+tombstones object references, and `DetailedEvents` (30 days by
+default) downgrades inline payloads to metadata-only live copies.
+A pass refuses zero windows — a misconfigured pass must not delete
+everything. A legal hold freezes one run: held events are skipped and
+counted, never expired, until the hold is released or expires. Holds
+need a reason, an operator or service caller, and stay inside their
+tenant. Aggregate or redacted claims (the 180-day tier) live in the
+control plane, not here.
+
+## Capture minimization and redaction
+
+`minimize.go` (T037) is the capture-path filter: default capture is
+minimized before it leaves the execution plane.
+
+- Inline content is redacted with `DefaultRedactionRules` (bearer
+  credentials, cloud access keys, private key blocks, email
+  addresses) and anything still over the 2048-byte budget downgrades
+  to a metadata-only reference that carries no bytes.
+- `Tokenize` replaces identifiers with keyed pseudonyms (`psd_…`,
+  HMAC-SHA256): the same identifier maps to the same token within a
+  tenant, so relationships survive, while nobody can hash candidate
+  secrets and search the logs — the mapping is keyed, not plain.
+- Object references pass through untouched; their bytes are already
+  in object storage. Every prepared payload still satisfies the
+  event contract.
+
 ## Payload sealing at rest
 
 `WithPayloadSealer` seals the reader-facing copy of every event's

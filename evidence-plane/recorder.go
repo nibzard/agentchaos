@@ -29,6 +29,15 @@ type Principal struct {
 	Role     string
 }
 
+// Actor names the principal for audit surfaces (legal holds record
+// who froze retention).
+func (p *Principal) Actor() string {
+	if p == nil || p.ID == "" {
+		return "unknown"
+	}
+	return p.ID
+}
+
 // Finding severities and categories used by the recorder (spec 18.1,
 // 14.6). Sequence gaps and clock disagreement are evidence gaps; they
 // say the record is incomplete, not that a policy was violated.
@@ -180,6 +189,8 @@ type tenantStore struct {
 	chainHead   string
 	findings    []Finding
 	checkpoints []SourceCheckpoint
+	// holds freezes retention per run (spec 19 legal holds).
+	holds map[string]LegalHold
 }
 
 type idempotentCall struct {
