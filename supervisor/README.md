@@ -81,6 +81,31 @@ The broker (T017) holds the effect `PROPOSED` while the review runs:
 `ALLOW` authorizes, `DENY` denies permanently, and `WATCH` and
 `ABSTAIN` keep the hold.
 
+## Safe degradation
+
+`DegradationTracker` records the health of the three dependencies
+whose failure changes what the system may do (spec 10.2, AC-021):
+
+| Dependency        | Failure effect                                            |
+| ----------------- | --------------------------------------------------------- |
+| `reviewer`        | review-routed effects hold; local work continues          |
+| `evidence_capture`| new external effects fence (broker evidence fence)        |
+| `governor_lease`  | new injection stops; experiment effects fence             |
+
+The rules: permitted local work continues in every degraded state
+(`LocalWorkAllowed` is always true — local work needs no external
+effect and no reviewer); effects whose profile requires review hold
+while the reviewer is degraded; and new external effects fence while
+evidence capture or the governor lease is degraded, because an effect
+without an evidence trail never executes silently. The tracker only
+observes and reports — the broker holds, and the governor fences.
+
+The broker side of the same rule is the evidence fence (spec 10.2):
+`POST /v1/evidence-fence/engage` denies every new proposal with
+`evidence_capture_fenced`, refuses to dispatch existing permits, and
+blocks review releases until an authority releases it. The governor's
+lease expiry and sweep fence runs on its side (T009).
+
 ## Tests
 
 ```bash

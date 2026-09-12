@@ -565,7 +565,7 @@
       "id": "T020",
       "title": "Implement safe degradation behavior",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Let permitted local work continue when reviewers fail, but hold effects that require the missing review. Fence external effects when mandatory evidence capture fails.",
       "depends_on": [
         "T009",
@@ -574,6 +574,17 @@
       "tags": [
         "resilience",
         "security"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z",
+      "files": [
+        "broker/fence.go",
+        "broker/fence_test.go",
+        "broker/broker.go",
+        "broker/server.go",
+        "broker/README.md",
+        "supervisor/degradation.go",
+        "supervisor/degradation_test.go",
+        "supervisor/README.md"
       ]
     },
     {

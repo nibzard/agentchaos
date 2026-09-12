@@ -17,6 +17,8 @@ POST /v1/delegations                   mint a child delegation
 POST /v1/delegations/{id}/revocation   fence a delegation group
 POST /v1/runs/{id}/stop                execute the stop protocol
 GET  /v1/runs/{id}/stop                read a run's stop report
+POST /v1/evidence-fence/engage         fence new effects (capture is down)
+POST /v1/evidence-fence/release        lift the evidence fence
 GET  /v1/quarantine                    list the tenant's dirty artifacts
 GET  /healthz                          liveness
 ```
@@ -359,6 +361,20 @@ report; every later stop replays it without re-journaling. A late
 lifecycle event after the terminal state was recorded sets the
 report's `reopened` flag and journals one `stop_reopened` event:
 prior assurance is stale.
+
+## Evidence fence
+
+Spec 10.2: if mandatory evidence capture fails, the broker fences new
+external effects rather than executing them silently. `POST
+/v1/evidence-fence/engage` (service and operator principals only,
+idempotent) denies every new proposal with `evidence_capture_fenced`,
+refuses to commit existing permits with 409 `evidence_fenced` — the
+effect keeps its state and retries after release — and turns review
+releases into denies. Stop compensations wait like everything else;
+cleanup resumes when capture is restored and an authority releases
+the fence. Both transitions journal `recovery_action` events. The
+`supervisor` module's `DegradationTracker` observes the outage and
+reports which behaviors degrade (T020).
 
 ## Build and test
 

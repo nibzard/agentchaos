@@ -142,15 +142,16 @@ type Broker struct {
 	// means the records-derived default.
 	verifier CleanupVerifier
 
-	mu          sync.Mutex
-	effects     map[string]*Effect         // by tenant-scoped key
-	delegations map[string]*Delegation     // by tenant-scoped key
-	stops       map[string]*StopReport     // by tenant-scoped run key; presence = stopped
-	quarantine  map[string]map[string]bool // tenant -> dirty resource@destination
-	events      []EvidenceEvent            // append-only journal
-	idempotency map[string]idempotentCall  // by tenant-scoped key
-	sequences   map[string]int64           // per source
-	dispatchers map[string]*sync.Mutex     // per-effect dispatch serialization
+	mu            sync.Mutex
+	effects       map[string]*Effect         // by tenant-scoped key
+	delegations   map[string]*Delegation     // by tenant-scoped key
+	stops         map[string]*StopReport     // by tenant-scoped run key; presence = stopped
+	quarantine    map[string]map[string]bool // tenant -> dirty resource@destination
+	evidenceFence EvidenceFenceState         // spec 10.2: fences new external effects
+	events        []EvidenceEvent            // append-only journal
+	idempotency   map[string]idempotentCall  // by tenant-scoped key
+	sequences     map[string]int64           // per source
+	dispatchers   map[string]*sync.Mutex     // per-effect dispatch serialization
 }
 
 // Option configures a broker at construction.
@@ -373,12 +374,23 @@ func (b *Broker) decideLocked(principal *Principal, effect *Effect, now string) 
 	stopped := b.stops[effectKey(principal.TenantID, effect.RunID)] != nil
 	gateRun := run
 	var verdict GateVerdict
-	if stopped && effect.CompensationOf == "" {
+	switch {
+	case b.fenced():
+		// The evidence fence outranks everything (spec 10.2): while
+		// mandatory evidence capture is down, no new external effect
+		// executes — not a fresh proposal, not a review release, not
+		// a stop compensation. The effect re-proposes once the fence
+		// lifts.
+		verdict = GateVerdict{
+			Reason:     "evidence_capture_fenced",
+			PolicyRefs: []string{b.policy.ref("fence.evidence")},
+		}
+	case stopped && effect.CompensationOf == "":
 		verdict = GateVerdict{
 			Reason:     "run_stopped",
 			PolicyRefs: []string{b.policy.ref("runs." + effect.RunID)},
 		}
-	} else {
+	default:
 		if stopped && run != nil {
 			window := *run
 			window.GrantExpiresAt = b.now().UTC().Add(PermitTTL).
@@ -655,6 +667,12 @@ func (b *Broker) Commit(principal *Principal, effectID, idemKey string) (*Effect
 	now := b.ClockUTC()
 	switch effect.State {
 	case StateAuthorized, StatePrepared:
+		// A permit earned before the fence still dispatches only
+		// after the fence lifts (spec 10.2): the commit refuses and
+		// the effect keeps its state, so the caller retries.
+		if b.fenced() {
+			return nil, ErrEvidenceFenced
+		}
 		return b.dispatchLocked(effect, now, idemKey)
 	case StateUnknown:
 		return b.reconcileLocked(effect, now)

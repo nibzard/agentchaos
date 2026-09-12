@@ -50,6 +50,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/delegations/{id}/revocation", s.revokeDelegation)
 	mux.HandleFunc("POST /v1/runs/{id}/stop", s.stopRun)
 	mux.HandleFunc("GET /v1/runs/{id}/stop", s.readStop)
+	mux.HandleFunc("POST /v1/evidence-fence/engage", s.engageEvidenceFence)
+	mux.HandleFunc("POST /v1/evidence-fence/release", s.releaseEvidenceFence)
 	mux.HandleFunc("GET /v1/quarantine", s.quarantine)
 	mux.HandleFunc("GET /healthz", s.health)
 	return mux
@@ -164,6 +166,9 @@ func (s *Server) commit(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, errNotFound):
 			writeProblem(w, requestID, http.StatusNotFound, "effect_not_found",
 				"no such effect for this tenant", false)
+		case errors.Is(err, ErrEvidenceFenced):
+			writeProblem(w, requestID, http.StatusConflict, "evidence_fenced",
+				err.Error(), false)
 		case errors.As(err, &transition):
 			status := http.StatusConflict
 			if transition.From == StateExpired {
@@ -489,6 +494,85 @@ func (s *Server) readStop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, report)
+}
+
+// engageEvidenceFence fences new external effects while mandatory
+// evidence capture is down (spec 10.2). Service and operator
+// principals only.
+func (s *Server) engageEvidenceFence(w http.ResponseWriter, r *http.Request) {
+	s.serveEvidenceFence(w, r, true)
+}
+
+// releaseEvidenceFence lifts the fence.
+func (s *Server) releaseEvidenceFence(w http.ResponseWriter, r *http.Request) {
+	s.serveEvidenceFence(w, r, false)
+}
+
+func (s *Server) serveEvidenceFence(w http.ResponseWriter, r *http.Request, engage bool) {
+	requestID := newRequestID()
+	key := r.Header.Get(HeaderIdem)
+	if !reIdemKey.MatchString(key) {
+		writeProblem(w, requestID, http.StatusBadRequest, "idempotency_key_required",
+			"mutations require an Idempotency-Key matching idk_[A-Za-z0-9_-]{8,128}", false)
+		return
+	}
+	principal := principalFrom(r)
+	if err := s.Broker.CheckAuthority(principal); err != nil {
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",
+			"request body could not be read", false)
+		return
+	}
+	if _, err := decodeExact(body, map[string]bool{"reason": true}); err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "fence_schema",
+			err.Error(), false)
+		return
+	}
+	var request struct {
+		Reason string `json:"reason"`
+	}
+	if err := json.Unmarshal(body, &request); err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "fence_schema",
+			"the fence request violates its contract", false)
+		return
+	}
+	engageTag := []byte{0}
+	if engage {
+		engageTag[0] = 1
+	}
+	digest := bodyDigest(append(engageTag, body...))
+	reply, replay, err := s.Broker.Reserve(principal.TenantID, key, digest)
+	if err != nil {
+		writeReservationProblem(w, requestID, err)
+		return
+	}
+	if replay {
+		writeJSON(w, http.StatusOK, reply)
+		return
+	}
+	if engage {
+		err = s.Broker.EngageEvidenceFence(principal, request.Reason)
+	} else {
+		err = s.Broker.ReleaseEvidenceFence(principal, request.Reason)
+	}
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		switch {
+		case errors.Is(err, errFenceState):
+			writeProblem(w, requestID, http.StatusConflict, "fence_state",
+				err.Error(), false)
+		default:
+			writeAuthProblem(w, requestID, err)
+		}
+		return
+	}
+	state := s.Broker.EvidenceFence()
+	s.Broker.Complete(principal.TenantID, key, digest, state)
+	writeJSON(w, http.StatusOK, state)
 }
 
 // quarantine lists the tenant's dirty artifacts. A quarantined
