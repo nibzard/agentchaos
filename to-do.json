@@ -906,7 +906,7 @@
       "id": "T034",
       "title": "Build the comparison and assurance UI",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Show utility, safety, latency, and cost tradeoffs. Show scoped evidence cards without a single universal safety score.",
       "depends_on": [
         "T021",
@@ -917,7 +917,16 @@
       "tags": [
         "ui",
         "assurance"
-      ]
+      ],
+      "files": [
+        "ui/src/compare.ts",
+        "ui/src/compare.test.ts",
+        "ui/src/compare-page.ts",
+        "ui/compare.html",
+        "ui/package.json",
+        "ui/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T035",

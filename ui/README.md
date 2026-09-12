@@ -16,12 +16,18 @@ ui/src/builder.test.ts   builder suite
 ui/src/timeline.ts       run timeline: strict parser, lane assignment,
                          effect pairing, renderer
 ui/src/timeline.test.ts  timeline suite
+ui/src/compare.ts        comparison and assurance view: frontier
+                         columns, paired-difference classification,
+                         scoped claim cards
+ui/src/compare.test.ts   comparison suite
 ui/src/main.ts           overview page entry: data island -> page
 ui/src/builder-page.ts   builder page entry: islands -> builder panel
 ui/src/timeline-page.ts  timeline page entry: island -> lanes
+ui/src/compare-page.ts   comparison page entry: islands -> frontier
 ui/index.html            overview shell with a synthetic example island
 ui/builder.html          builder shell with example islands
 ui/timeline.html         timeline shell with a synthetic example island
+ui/compare.html          comparison shell with synthetic example islands
 ```
 
 ## Data flow
@@ -116,3 +122,26 @@ infrastructure.
 - Object references render as digests only; the page never fetches
   the referenced content. Redaction, truncation, limited source
   coverage, and clock uncertainty are stated, not hidden.
+
+## Comparison and assurance view
+
+`compare.ts` (spec 17.4 and 17.5, T034) renders the
+utility/safety/latency/cost frontier and scoped assurance cards.
+
+- The frontier is a table of separate columns. There is no combined
+  score, no ranking, and no recommended profile; rows stay in the
+  document's order.
+- Every rate carries its denominator. A zero denominator reads "not
+  measured", never zero. Unknown outcomes stay visible outside every
+  verified rate.
+- A profile that completed no eligible task is called out: refusing
+  everything is not an improvement and cannot be recommended.
+- `classifyDiff` labels each paired difference as an improvement, a
+  regression, or uncertain from its interval; an unknown metric is
+  never classified.
+- Claim cards are scoped by construction: hazard, eligible
+  population, all seven fingerprints, observed failures, unresolved
+  cases with the all-unresolved sensitivity bound, confidence bound,
+  target, dependence assumptions, and expiration. Status text says
+  "supported within scope only"; nothing on the page claims
+  universal safety.
