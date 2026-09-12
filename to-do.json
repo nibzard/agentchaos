@@ -1438,7 +1438,7 @@
       "id": "T054",
       "title": "Research generated long-horizon scenarios",
       "priority": 5,
-      "status": "todo",
+      "status": "done",
       "details": "Generate scenarios only in sandbox evaluation, preserve them as reproducible artifacts, test containment, and keep public suites separate from private holdouts.",
       "depends_on": [
         "T016",
@@ -1447,7 +1447,14 @@
       "tags": [
         "p2",
         "research"
-      ]
+      ],
+      "files": [
+        "execution-plane/gauntlet_scenarios/generated.py",
+        "execution-plane/gauntlet_scenarios/__init__.py",
+        "execution-plane/tests/test_generated.py",
+        "execution-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T055",

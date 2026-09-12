@@ -12,6 +12,13 @@ scripts model three outcomes per template — the benign run without the
 fault, the treatment run where the system under test holds the
 property, and a break script where it does not, so every assertion can
 be shown to fail, not just to pass.
+
+`SandboxGenerator` (T054) adds generated long-horizon scenarios: pure
+spec in, deterministic scenarios out, stored as digest-verified
+artifacts, gated by containment before scheduling, split between
+public suites and private holdouts, and minimized into fixtures that
+refuse training-data or public-example use without an explicit data
+authorization.
 """
 
 from gauntlet_scenarios.assertions import AssertionVerdict, verify_outcomes, worst
@@ -63,7 +70,33 @@ from gauntlet_scenarios.production import (
     separate_statistics,
 )
 
+from gauntlet_scenarios.generated import (
+    CONTAINED,
+    ESCAPE,
+    MIN_HORIZON,
+    RESTRICTED_USES,
+    SUITE_PRIVATE_HOLDOUT,
+    SUITE_PUBLIC,
+    GeneratedScenarioError,
+    GenerationSpec,
+    SandboxGenerator,
+    SuiteRegistry,
+    authorize_use,
+    check_use,
+    evaluate_containment,
+    load_artifact,
+    minimize_to_fixture,
+    scenario_digest,
+    schedule,
+)
+
 __all__ = [
+    "CONTAINED",
+    "ESCAPE",
+    "MIN_HORIZON",
+    "RESTRICTED_USES",
+    "SUITE_PRIVATE_HOLDOUT",
+    "SUITE_PUBLIC",
     "TEMPLATE_IDS",
     "AssertionVerdict",
     "CLEAN",
@@ -71,6 +104,8 @@ __all__ = [
     "DRAFT",
     "Ed25519ReleaseSigner",
     "Enrollment",
+    "GeneratedScenarioError",
+    "GenerationSpec",
     "IndependentKillPath",
     "LibraryExecutor",
     "LifecycleError",
@@ -83,21 +118,30 @@ __all__ = [
     "RecordingProductionPath",
     "ReleaseRegistry",
     "SIGNED",
+    "SandboxGenerator",
     "Script",
     "SinkCleanupVerifier",
     "Step",
+    "SuiteRegistry",
     "Template",
     "UNKNOWN",
     "VALIDATED",
+    "authorize_use",
     "build_scenario_version",
+    "check_use",
     "classification_status",
     "compatibility_digest",
     "content_digest",
+    "evaluate_containment",
     "fixture_digest",
     "get_template",
     "library",
+    "load_artifact",
+    "minimize_to_fixture",
     "release",
+    "scenario_digest",
     "scenario_version_id",
+    "schedule",
     "separate_statistics",
     "sign_release",
     "validate_isolated",

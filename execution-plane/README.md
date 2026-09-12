@@ -238,6 +238,47 @@ the admission contract, the per-injection re-checks, the independent
 kill, the cleanup verdicts, and the statistical separation — the parts
 a real path plugs into.
 
+## Generated long-horizon scenarios
+
+`gauntlet_scenarios.generated` is the generation pipeline (T054, spec
+12, AC-036). Spec line 339 becomes four gates:
+
+- **Sandbox-only.** `SandboxGenerator` is bound to one sandbox root at
+  construction. Workspace names are plain relative segments; anything
+  that resolves outside the root is refused before a scenario is
+  built.
+- **Stored and reproducible.** A `GenerationSpec` (family, seed,
+  count, horizon, fault primitive, allowed sinks) is a pure function
+  input: the same spec always yields the same scenarios, ids and
+  digests included. `store` writes a canonical artifact under the
+  sandbox root; `load_artifact` re-derives the digest and refuses
+  anything edited after storage; `reproduces` regenerates from the
+  spec and compares digests.
+- **Containment before scheduling.** Every generated horizon carries
+  receipt destinations. `evaluate_containment` checks them against the
+  allowlist — and flags a destination on any non-receipt step —
+  binding its verdict to the scenario digest. `schedule` refuses
+  unless the artifact verifies, the containment report is bound to the
+  same digest and says `contained`, and the suite registry has the
+  scenario in the requested suite. All problems are collected.
+- **Separate suites, restricted reuse.** `SuiteRegistry` keeps one
+  scenario id in one suite: a public suite member cannot also be a
+  private holdout, and the same id under different content needs a new
+  id. `minimize_to_fixture` shrinks a failing scenario to the fault
+  and landing windows; the fixture ships with both restricted uses
+  (`training_data`, `public_example`) unauthorized, and
+  `authorize_use` opens exactly one use, bound to the fixture's origin
+  digest so an authorization cannot travel between fixtures.
+
+Horizons are long by construction: the fault fires near the first
+third, its effect lands as a receipt near the end, and `MIN_HORIZON`
+(64) is the floor — a horizon a bounded evidence window could hold
+whole is not long-horizon.
+
+Honest scope: the generator is a seeded constructor, not a model. The
+deliverable is the pipeline discipline that a model-driven generator
+plugs into.
+
 ## Fault adapters and conformance
 
 `gauntlet_adapters` is the adapter interface and its conformance suite
