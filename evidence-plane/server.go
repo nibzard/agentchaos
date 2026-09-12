@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // Principal headers, resolved by the deployment's authentication
@@ -47,6 +48,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/evidence/chain", s.chain)
 	mux.HandleFunc("GET /v1/evidence/verify", s.verify)
 	mux.HandleFunc("GET /v1/evidence/findings", s.findings)
+	mux.HandleFunc("POST /v1/evidence/collector-check", s.collectorCheck)
 	mux.HandleFunc("GET /healthz", s.health)
 	return mux
 }
@@ -117,17 +119,35 @@ func (s *Server) ingest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
-// listEvents returns the tenant's events, optionally narrowed by run.
+// listEvents returns the tenant's events. Filters combine: run_id
+// narrows to a run, correlation_id joins events across sources (spec
+// 9.4), and effect_id pulls every record of one effect — the worker's
+// claim next to the collector's receipt.
 func (s *Server) listEvents(w http.ResponseWriter, r *http.Request) {
 	requestID := newRequestID()
-	runID := r.URL.Query().Get("run_id")
+	query := r.URL.Query()
+	runID := query.Get("run_id")
 	if runID != "" && !reRunID.MatchString(runID) {
 		writeProblem(w, requestID, http.StatusBadRequest, "run_id_invalid",
 			"run id must match run_[a-z0-9]{8,64}", false)
 		return
 	}
+	correlationID := query.Get("correlation_id")
+	if correlationID != "" && !reCorrelation.MatchString(correlationID) {
+		writeProblem(w, requestID, http.StatusBadRequest, "correlation_id_invalid",
+			"correlation id must match cid_[A-Za-z0-9_-]{4,128}", false)
+		return
+	}
+	effectID := query.Get("effect_id")
+	if effectID != "" && !reEffectID.MatchString(effectID) {
+		writeProblem(w, requestID, http.StatusBadRequest, "effect_id_invalid",
+			"effect id must match eff_[a-z0-9]{8,64}", false)
+		return
+	}
 	principal := principalFrom(r)
-	events, err := s.Recorder.Events(principal, runID)
+	events, err := s.Recorder.Events(principal, EventQuery{
+		RunID: runID, CorrelationID: correlationID, EffectID: effectID,
+	})
 	if err != nil {
 		writeAuthProblem(w, requestID, err)
 		return
@@ -190,6 +210,80 @@ func (s *Server) findings(w http.ResponseWriter, r *http.Request) {
 		"tenant_id": principal.TenantID,
 		"findings":  found,
 	})
+}
+
+// checkKeys are the exact accepted spellings of the collector-check
+// body (AC-001: contract keys are exact).
+var checkKeys = map[string]bool{"max_quiet_seconds": true}
+
+// collectorCheck sweeps collector heartbeats and opens a finding per
+// silent source (spec 9.4: collector failures become explicit
+// findings). It mutates — findings land in the store — so it follows
+// the same authentication and idempotency contract as ingest.
+func (s *Server) collectorCheck(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",
+			"request body could not be read", false)
+		return
+	}
+	principal := principalFrom(r)
+	if principal == nil {
+		writeProblem(w, requestID, http.StatusUnauthorized, "unauthenticated",
+			"caller identity headers are required", false)
+		return
+	}
+	key := r.Header.Get(HeaderIdem)
+	if !reIdemKey.MatchString(key) {
+		writeProblem(w, requestID, http.StatusBadRequest, "idempotency_key_required",
+			"mutations require an Idempotency-Key matching idk_[A-Za-z0-9_-]{8,128}", false)
+		return
+	}
+	digest := bodyDigest(body)
+	reply, replay, err := s.Recorder.Reserve(principal.TenantID, key, digest)
+	if err != nil {
+		writeReservationProblem(w, requestID, err)
+		return
+	}
+	if replay {
+		writeJSON(w, http.StatusOK, reply)
+		return
+	}
+	raw, err := decodeExact(body, checkKeys)
+	if err != nil {
+		s.Recorder.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusBadRequest, "collector_check_schema",
+			err.Error(), false)
+		return
+	}
+	secondsRaw, ok := raw["max_quiet_seconds"]
+	if !ok {
+		s.Recorder.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusBadRequest, "collector_check_schema",
+			"max_quiet_seconds is required", false)
+		return
+	}
+	var seconds int64
+	if err := json.Unmarshal(secondsRaw, &seconds); err != nil || seconds < 1 || seconds > 86400 {
+		s.Recorder.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusUnprocessableEntity, "max_quiet_seconds_invalid",
+			"max_quiet_seconds must be an integer from 1 to 86400", false)
+		return
+	}
+	findings, err := s.Recorder.CheckCollectorLiveness(principal,
+		time.Duration(seconds)*time.Second)
+	if err != nil {
+		s.Recorder.Release(principal.TenantID, key, digest)
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	result := map[string]any{
+		"tenant_id": principal.TenantID, "max_quiet_seconds": seconds,
+		"findings": findings, "opened": len(findings),
+	}
+	s.Recorder.Complete(principal.TenantID, key, digest, result)
+	writeJSON(w, http.StatusOK, result)
 }
 
 func principalFrom(r *http.Request) *Principal {

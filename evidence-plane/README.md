@@ -12,10 +12,11 @@ speaking, and the role gate says who may say it.
 
 ```text
 POST /v1/evidence/events              ingest a batch of events
-GET  /v1/evidence/events              list the tenant's events (run_id filter)
+GET  /v1/evidence/events              list events (run_id, correlation_id, effect_id filters)
 GET  /v1/evidence/chain               report the tenant's chain head
 GET  /v1/evidence/verify              walk the chain and checkpoint signatures
 GET  /v1/evidence/findings            list the tenant's derived findings
+POST /v1/evidence/collector-check     open findings for silent collectors
 GET  /healthz                         liveness
 ```
 
@@ -87,6 +88,31 @@ uncertainty travel on every event. The frontier logic:
 
 Findings are Finding documents (spec 18.1) with evidence references.
 A gap finding says what is absent; it never invents content.
+
+## Joins and edges
+
+Correlation ids join events across sources: the worker's
+`tool_response` claim and the collector's `external_receipt` carry the
+same `cid_` and the `correlation_id` filter returns both, trust labels
+kept distinct. The `effect_id` filter pulls every record of one
+effect — proposal next to broker decision next to receipt.
+
+Parent edges form the event graph. An edge pointing at an event this
+store never received is reported by `verify` under
+`unresolved_parents`: the chain stays intact (it proves content, not
+arrival), and out-of-order delivery can resolve the edge later.
+
+## Collector silence
+
+A collector that stops heartbeating is a coverage failure, not a
+quiet one (spec 9.4). `POST /v1/evidence/collector-check` with
+`max_quiet_seconds` opens one finding per source whose newest
+`collector_heartbeat` is older than the window. The finding cites the
+last heartbeat and names the missing kind in its coverage gap.
+Sources that never sent a heartbeat are not judged; polling cannot
+stack findings — a source is reported once until it beats again. The
+check mutates (findings land in the store), so it takes identity
+headers and an idempotency key like ingest.
 
 ## Chain, checkpoints, retention
 

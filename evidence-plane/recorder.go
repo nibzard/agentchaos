@@ -116,6 +116,17 @@ type VerificationReport struct {
 	CheckpointsChecked int    `json:"checkpoints_checked"`
 	ChainDigest        string `json:"chain_digest"`
 	FirstBreak         string `json:"first_break,omitempty"`
+	// UnresolvedParents lists child events whose parent edges point at
+	// events this store never received. The chain stays intact: it
+	// proves the content of what was stored, not the completeness of
+	// what arrived. Out-of-order delivery can resolve an entry later.
+	UnresolvedParents []UnresolvedParent `json:"unresolved_parents,omitempty"`
+}
+
+// UnresolvedParent is one dangling edge in the event graph.
+type UnresolvedParent struct {
+	EventID  string `json:"event_id"`
+	ParentID string `json:"parent_event_id"`
 }
 
 // storedEvent keeps the original record the chain covers, plus the
@@ -127,11 +138,20 @@ type storedEvent struct {
 	prev   string
 }
 
-// sourceState tracks one source's sequence frontier per tenant.
+// sourceState tracks one source's sequence frontier per tenant, plus
+// the heartbeat bookkeeping the liveness sweep reads.
 type sourceState struct {
 	last             int64
 	seen             map[int64]bool
 	checkpointDigest string
+	// lastHeartbeatAt is the observed_at of the source's newest
+	// collector_heartbeat, lastHeartbeatEvent its event id (the
+	// silence finding cites it: a finding without evidence is not
+	// representable), and staleReported suppresses a repeat finding
+	// until a new heartbeat arrives.
+	lastHeartbeatAt    string
+	lastHeartbeatEvent string
+	staleReported      bool
 }
 
 // Recorder is the authoritative evidence store (spec 9.4). State is
@@ -322,6 +342,11 @@ func (r *Recorder) Ingest(principal *Principal, batch *Batch) (*IngestResult, er
 		source.seen[event.Sequence] = true
 		if event.Sequence > source.last {
 			source.last = event.Sequence
+		}
+		if event.EventKind == KindCollectorHeartbeat {
+			source.lastHeartbeatAt = event.ObservedAt
+			source.lastHeartbeatEvent = event.ID
+			source.staleReported = false
 		}
 
 		stored.prev = store.chainHead
@@ -541,6 +566,17 @@ func (r *Recorder) Verify(principal *Principal) (*VerificationReport, error) {
 			return report, nil
 		}
 	}
+	// Parent edges point at event ids, possibly delivered later; a
+	// dangling edge at verify time is a completeness signal, not a
+	// chain break. The chain proves content; it cannot prove arrival.
+	for _, stored := range store.events {
+		for _, parent := range stored.event.ParentEventIDs {
+			if _, ok := store.byID[parent]; !ok {
+				report.UnresolvedParents = append(report.UnresolvedParents,
+					UnresolvedParent{EventID: stored.event.ID, ParentID: parent})
+			}
+		}
+	}
 	report.Intact = true
 	report.ChainDigest = prev
 	return report, nil
@@ -570,10 +606,19 @@ func (r *Recorder) verifyCheckpoint(checkpoint *SourceCheckpoint) bool {
 	return ed25519.Verify(public, []byte(checkpoint.Digest), signature)
 }
 
-// Events lists a tenant's stored events, newest last. Any run filter
-// narrows to that run. Readers receive the live copies, whose payloads
-// retention may have tombstoned.
-func (r *Recorder) Events(principal *Principal, runID string) ([]*Event, error) {
+// EventQuery narrows an events listing. Every filter is optional and
+// the filters combine. Correlation and effect filters exist for the
+// join spec 9.4 asks of correlation ids: one thread of behavior across
+// worker claims, collector facts, and monitor interpretations.
+type EventQuery struct {
+	RunID         string
+	CorrelationID string
+	EffectID      string
+}
+
+// Events lists a tenant's stored events, newest last. Readers receive
+// the live copies, whose payloads retention may have tombstoned.
+func (r *Recorder) Events(principal *Principal, query EventQuery) ([]*Event, error) {
 	if err := checkReader(principal); err != nil {
 		return nil, err
 	}
@@ -585,12 +630,29 @@ func (r *Recorder) Events(principal *Principal, runID string) ([]*Event, error) 
 	}
 	out := []*Event{}
 	for _, stored := range store.events {
-		if runID != "" && stored.live.RunID != runID {
+		if query.RunID != "" && stored.live.RunID != query.RunID {
+			continue
+		}
+		if query.CorrelationID != "" &&
+			!containsID(stored.live.CorrelationIDs, query.CorrelationID) {
+			continue
+		}
+		if query.EffectID != "" && stored.live.EffectID != query.EffectID {
 			continue
 		}
 		out = append(out, CloneEvent(stored.live))
 	}
 	return out, nil
+}
+
+// containsID reports whether the id is in the list.
+func containsID(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 // Findings lists a tenant's derived findings.
@@ -607,6 +669,71 @@ func (r *Recorder) Findings(principal *Principal) ([]Finding, error) {
 	out := make([]Finding, len(store.findings))
 	copy(out, store.findings)
 	return out, nil
+}
+
+// CheckCollectorLiveness opens one finding per collector source whose
+// newest heartbeat is older than maxQuiet (spec 9.4: collector
+// failures become explicit findings — silence is data, not absence of
+// data). A source that never sent a heartbeat is not judged: nothing
+// says it was due. A reported source stays quiet in later sweeps until
+// a new heartbeat arrives, so polling cannot stack duplicates.
+func (r *Recorder) CheckCollectorLiveness(principal *Principal,
+	maxQuiet time.Duration) ([]Finding, error) {
+	if err := checkReader(principal); err != nil {
+		return nil, err
+	}
+	if maxQuiet <= 0 {
+		return nil, fmt.Errorf("maxQuiet must be positive")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	store, ok := r.tenants[principal.TenantID]
+	if !ok {
+		return []Finding{}, nil
+	}
+	now := r.now()
+	opened := []Finding{}
+	ids := make([]string, 0, len(store.sources))
+	for id := range store.sources {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		state := store.sources[id]
+		if state.lastHeartbeatAt == "" || state.staleReported {
+			continue
+		}
+		beat, err := time.Parse(time.RFC3339Nano, state.lastHeartbeatAt)
+		if err != nil {
+			continue
+		}
+		if now.Sub(beat) <= maxQuiet {
+			continue
+		}
+		ingestAt := now.UTC().Format("2006-01-02T15:04:05Z")
+		finding := Finding{
+			Kind: "Finding", APIVersion: "v1", ID: mintFindingID(),
+			TenantID: principal.TenantID,
+			Category: CategoryEvidenceGap, Severity: SeverityH1,
+			Title: fmt.Sprintf("collector source %s stopped heartbeating", id),
+			Description: fmt.Sprintf(
+				"last heartbeat observed at %s, more than %s before %s; "+
+					"a silent collector is a coverage failure, not a quiet one",
+				state.lastHeartbeatAt, maxQuiet, ingestAt),
+			EvidenceRefs: []EvidenceRef{{
+				EventID: state.lastHeartbeatEvent,
+				Note:    "the last heartbeat observed before the silence",
+			}},
+			CoverageGap: &CoverageGap{
+				ExpectedEventKind: KindCollectorHeartbeat, SourceID: id,
+			},
+			State: FindingStateOpen, CreatedAt: ingestAt,
+		}
+		opened = append(opened, finding)
+		state.staleReported = true
+	}
+	store.findings = append(store.findings, opened...)
+	return opened, nil
 }
 
 // Chain reports the tenant's chain head and event count.

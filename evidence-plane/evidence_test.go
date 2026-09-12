@@ -76,7 +76,7 @@ func TestIngestStoresAndChains(t *testing.T) {
 	if result.ChainDigest == "" {
 		t.Fatal("chain digest missing")
 	}
-	events, err := recorder.Events(collectorPrincipal(), "")
+	events, err := recorder.Events(collectorPrincipal(), EventQuery{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +344,7 @@ func TestRetentionTombstonesOldObjectsOnly(t *testing.T) {
 	if tombstoned != 1 {
 		t.Fatalf("tombstoned: %d", tombstoned)
 	}
-	events, _ := recorder.Events(collectorPrincipal(), "")
+	events, _ := recorder.Events(collectorPrincipal(), EventQuery{})
 	var flagged int
 	for _, event := range events {
 		if event.Payload.Tombstone {
@@ -486,7 +486,7 @@ func TestCollectorHeartbeatCollects(t *testing.T) {
 func TestReadsRefuseWorkers(t *testing.T) {
 	recorder := testRecorder(t)
 	worker := &Principal{ID: "act_worker-reference-01", TenantID: testTenant, Role: RoleWorker}
-	if _, err := recorder.Events(worker, ""); err == nil {
+	if _, err := recorder.Events(worker, EventQuery{}); err == nil {
 		t.Fatal("a worker read the authoritative store")
 	}
 	if _, err := recorder.Findings(worker); err == nil {

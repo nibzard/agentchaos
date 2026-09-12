@@ -373,7 +373,7 @@
       "id": "T012",
       "title": "Implement event ordering and integrity metadata",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Store per-source sequence numbers, correlation IDs, parent edges, clock uncertainty, signed checkpoints, and explicit gap findings.",
       "depends_on": [
         "T011"
@@ -381,7 +381,16 @@
       "tags": [
         "evidence",
         "integrity"
-      ]
+      ],
+      "files": [
+        "evidence-plane/recorder.go",
+        "evidence-plane/server.go",
+        "evidence-plane/ordering_test.go",
+        "evidence-plane/contract_test.go",
+        "evidence-plane/evidence_test.go",
+        "evidence-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T13:20:00Z"
     },
     {
       "id": "T013",

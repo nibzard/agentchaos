@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestValidateEventAcceptsTheFixture(t *testing.T) {
@@ -217,14 +218,19 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 	recorder := testRecorder(t)
 
 	// The three trust labels, each from its own component: worker
-	// claim, collector fact, monitor interpretation (AC-012).
+	// claim, collector fact, monitor interpretation (AC-012). The
+	// claim and the fact share a correlation id and a parent edge —
+	// the join metadata spec 9.4 asks the store to keep.
 	claim := collectorEvent(0)
 	claim.TrustLabel = TrustWorkerClaim
 	claim.Source = EventSource{ID: "src_worker-reference-01", Component: ComponentWorker}
 	claim.EventKind = KindToolResponse
+	claim.CorrelationIDs = []string{"cid_crosslang000001"}
 	fact := collectorEvent(1)
 	fact.EventKind = KindBrokerDecision
 	fact.EffectID = "eff_1a2b3c4d5e6f7081"
+	fact.CorrelationIDs = []string{"cid_crosslang000001"}
+	fact.ParentEventIDs = []string{claim.ID}
 	reading := collectorEvent(2)
 	reading.TrustLabel = TrustMonitorReading
 	reading.Source = EventSource{ID: "src_supervisor-alpha-1", Component: ComponentMonitor}
@@ -255,7 +261,7 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	events, err := recorder.Events(collectorPrincipal(), "")
+	events, err := recorder.Events(collectorPrincipal(), EventQuery{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,6 +282,26 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 	checkpointed.EventKind = KindDelegation
 	checkpointed.Checkpoint = testCheckpoint(t)
 	documents["event_with_checkpoint"] = checkpointed
+
+	// A silent collector becomes an explicit finding (spec 9.4); its
+	// shape, coverage gap included, must validate too.
+	silent := collectorEvent(0)
+	silent.ID = "evt_silent0000000001"
+	silent.Source = EventSource{
+		ID: "src_collector-beta-1", Component: ComponentCollector,
+		Coverage: CoverageObserved,
+	}
+	silent.EventKind = KindCollectorHeartbeat
+	silent.ObservedAt = "2026-09-12T06:00:00Z" // six hours quiet
+	if _, err := recorder.Ingest(collectorPrincipal(),
+		&Batch{Events: []*Event{silent}}); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := recorder.CheckCollectorLiveness(collectorPrincipal(), time.Hour)
+	if err != nil || len(opened) != 1 {
+		t.Fatalf("liveness: %+v err: %v", opened, err)
+	}
+	documents["liveness_finding"] = opened[0]
 
 	directory := t.TempDir()
 	listPath := filepath.Join(directory, "documents.json")
