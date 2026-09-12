@@ -638,7 +638,7 @@
       "id": "T026",
       "title": "Implement the beta HTTP API",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Add endpoints for experiments, validation, runs, stop requests, evidence ingest, effect authorization, effect commit, assurance claims, and safety levers.",
       "depends_on": [
         "T002",
@@ -647,10 +647,26 @@
         "T009",
         "T011"
       ],
+      "files": [
+        "api/go.mod",
+        "api/problem.go",
+        "api/idempotency.go",
+        "api/compiler.go",
+        "api/experiments.go",
+        "api/claims.go",
+        "api/server.go",
+        "api/server_test.go",
+        "api/cmd/apid/main.go",
+        "api/README.md",
+        "governor/governor.go",
+        "control-plane/acx_compiler/__main__.py",
+        "control-plane/acx_compiler/__init__.py"
+      ],
       "tags": [
         "api",
         "backend"
-      ]
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T027",

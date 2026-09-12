@@ -1,6 +1,7 @@
 package governor
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -78,6 +79,17 @@ func (r *refusal) Error() string {
 
 func refuse(code, detail string) error {
 	return &refusal{Code: code, Detail: detail}
+}
+
+// AsRefusal reports whether err is a governor refusal and returns its
+// code and detail. Embedders such as the API monolith map refusals to
+// their own error envelopes without depending on internal types.
+func AsRefusal(err error) (code, detail string, ok bool) {
+	var denied *refusal
+	if errors.As(err, &denied) {
+		return denied.Code, denied.Detail, true
+	}
+	return "", "", false
 }
 
 // checkRole guards the authority path. Workers never drive the
