@@ -47,15 +47,37 @@ POST /v1/safety-levers/{scope}/engage   fence tenant or experiment
 GET  /healthz                           liveness
 ```
 
-Callers authenticate through the identity headers `X-ACX-Actor`,
-`X-ACX-Tenant`, and `X-ACX-Role`, set by the deployment's
-authentication front end. A tenant in a request body never overrides
-the authenticated tenant (spec 18.3). Every API-owned mutation requires
-an `Idempotency-Key` matching `idk_[A-Za-z0-9_-]{8,128}`; reuse with
-the same body replays the stored reply, and reuse with a different body
-is a 409 conflict. Authentication and role checks run before the reply
-ledger, so a replay from an unauthenticated or wrong-role caller never
-surfaces a stored reply.
+Callers authenticate with a principal token. The deployment's
+authentication front end verifies the human or service login and issues
+a short-lived token that binds actor, tenant, and role:
+
+```text
+Authorization: Bearer acx1.<base64url payload>.<base64url signature>
+payload: {"actor","tenant","role","exp"}   signature: Ed25519
+```
+
+The API verifies the token against the front end's public keys and
+derives identity itself. It then sets the `X-ACX-Actor`, `X-ACX-Tenant`,
+and `X-ACX-Role` headers on the request from the verified values, which
+is the only way those headers come to exist: identity headers a client
+sends are overwritten, never read. The governor, the evidence plane,
+and the broker proxy all see identity the API derived. The bearer token
+itself stops at the API and never travels upstream.
+
+Serve `apid` with `-auth-key <path>`, a file holding one base64url
+Ed25519 public key per line. Several keys rotate with overlap. Without
+a key file the process refuses to start: the API serves nothing
+unverified. `MintPrincipalToken` in `auth.go` is the reference
+implementation of the issuing side; the private key never leaves the
+front end.
+
+A tenant in a request body never overrides the token's tenant (spec
+18.3). Every API-owned mutation requires an `Idempotency-Key` matching
+`idk_[A-Za-z0-9_-]{8,128}`; reuse with the same body replays the
+stored reply, and reuse with a different body is a 409 conflict.
+Authentication and role checks run before the reply ledger, so a replay
+from an unauthenticated or wrong-role caller never surfaces a stored
+reply.
 
 Roles:
 
@@ -67,7 +89,10 @@ Roles:
 - Worker identities cannot alter experiments, assess claims, or engage
   levers. The evidence plane itself refuses a collector fact from a
   non-collector identity, and the broker refuses worker and collector
-  callers on every mutation.
+  callers on every mutation — so a worker cannot ingest collector
+  events or issue effect permits under any identity but its own.
+- Safety levers engage and never disengage. No route relaxes a fence;
+  fences lift only through the governor's reviewed cleanup path.
 
 ## Experiment lifecycle
 
@@ -132,11 +157,14 @@ read is indistinguishable from absence.
 
 ```bash
 cd api && go test ./...
-go run ./cmd/apid   # serve on 127.0.0.1:8080, broker at :8081
+go run ./cmd/apid -auth-key keys.txt   # serve on 127.0.0.1:8080, broker at :8081
 ```
 
 The suite wires a real governor, evidence recorder, and a live broker
 upstream in process, and drives the fixture experiment through the
 compiler subprocess end to end: create, validate, run, stop, and the
-post-stop fence that denies new effects with `run_stopped`. Compiler
-tests skip when python3 is unavailable.
+post-stop fence that denies new effects with `run_stopped`. The
+authentication tests mint principal tokens with an Ed25519 key the
+suite holds, and prove forged headers, expired tokens, and foreign
+signers never authenticate. Compiler tests skip when python3 is
+unavailable.

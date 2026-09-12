@@ -672,15 +672,23 @@
       "id": "T027",
       "title": "Implement API authentication and tenant isolation",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Bind identity to tenant server-side. Prevent workers from ingesting collector events, issuing effect permits, changing experiments, or disengaging safety levers.",
       "depends_on": [
         "T026"
       ],
+      "files": [
+        "api/auth.go",
+        "api/server.go",
+        "api/server_test.go",
+        "api/cmd/apid/main.go",
+        "api/README.md"
+      ],
       "tags": [
         "api",
         "security"
-      ]
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T028",

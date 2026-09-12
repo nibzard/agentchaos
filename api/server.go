@@ -14,29 +14,34 @@ import (
 	"agentchaos/governor"
 )
 
-// Server is the beta API monolith (spec 8.1, 18.2, T026). The governor
-// and the evidence plane run in process; the broker stays a separately
-// isolated service, and effect traffic forwards to it unchanged.
+// Server is the beta API monolith (spec 8.1, 18.2, T026, T027). The
+// governor and the evidence plane run in process; the broker stays a
+// separately isolated service, and effect traffic forwards to it
+// unchanged.
 type Server struct {
 	Governor    *governor.Governor
 	Evidence    *evidence.Server
 	Assurer     *control.Assurer
 	Compiler    Compiler
 	BrokerURL   *url.URL // the separately deployed broker upstream
+	Auth        *Authenticator
 	Experiments *experimentStore
 	Claims      *claimStore
 	idem        *idemLedger
 }
 
-// New builds the monolith with fresh in-memory stores.
+// New builds the monolith with fresh in-memory stores. The
+// authenticator verifies principal tokens; identity binds server-side.
 func New(gov *governor.Governor, evidenceServer *evidence.Server,
-	assurer *control.Assurer, compiler Compiler, brokerURL *url.URL) *Server {
+	assurer *control.Assurer, compiler Compiler, brokerURL *url.URL,
+	auth *Authenticator) *Server {
 	return &Server{
 		Governor:    gov,
 		Evidence:    evidenceServer,
 		Assurer:     assurer,
 		Compiler:    compiler,
 		BrokerURL:   brokerURL,
+		Auth:        auth,
 		Experiments: newExperimentStore(),
 		Claims:      newClaimStore(),
 		idem:        newIdemLedger(),
@@ -87,7 +92,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	return mux
+	// Every route runs behind token verification (T027). The middleware
+	// rewrites the identity headers with verified values, so components
+	// and the broker proxy see only identity the API derived itself.
+	return s.middleware(mux)
 }
 
 // brokerProxy forwards a request to the broker upstream unchanged:

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -125,10 +127,35 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatal(err)
 	}
 	server := New(gov, evidenceServer, control.NewAssurer(),
-		NewPythonCompiler(filepath.Join("..", "control-plane")), brokerURL)
+		NewPythonCompiler(filepath.Join("..", "control-plane")), brokerURL,
+		NewAuthenticator(testPrivateKey().Public().(ed25519.PublicKey)))
 	apiServer := httptest.NewServer(server.Handler())
 	t.Cleanup(apiServer.Close)
 	return &testEnv{api: apiServer, gov: gov}
+}
+
+// The test suite plays the authentication front end: one Ed25519 pair
+// for the whole run, tokens minted per request.
+var (
+	testAuthOnce sync.Once
+	testAuthKey  ed25519.PrivateKey
+)
+
+func testPrivateKey() ed25519.PrivateKey {
+	testAuthOnce.Do(func() {
+		_, private, err := ed25519.GenerateKey(nil)
+		if err != nil {
+			panic(err)
+		}
+		testAuthKey = private
+	})
+	return testAuthKey
+}
+
+// tokenFor mints a principal token that expires in an hour.
+func tokenFor(actor, tenant, role string) string {
+	return MintPrincipalToken(testPrivateKey(), actor, tenant, role,
+		time.Now().UTC().Add(time.Hour).Format(time.RFC3339))
 }
 
 func brokerRun() *broker.RunContext {
@@ -142,12 +169,17 @@ func brokerRun() *broker.RunContext {
 	}
 }
 
+// headers carries a verified principal token for the platform control
+// identity. Identity headers a test might set are ignored: the API
+// derives them from the token (T027).
 func headers(role, key string) map[string]string {
+	return headersFor("act_platform-control-01", testTenant, role, key)
+}
+
+func headersFor(actor, tenant, role, key string) map[string]string {
 	return map[string]string{
-		HeaderActor:  "act_platform-control-01",
-		HeaderTenant: testTenant,
-		HeaderRole:   role,
-		HeaderIdem:   key,
+		"Authorization": "Bearer " + tokenFor(actor, tenant, role),
+		HeaderIdem:      key,
 	}
 }
 
@@ -391,12 +423,8 @@ func TestValidationRefusesABrokenManifest(t *testing.T) {
 func TestTenantIsolationOnExperiments(t *testing.T) {
 	env := newTestEnv(t)
 	createDraftExperiment(t, env, "idk_create-isolated-1")
-	other := map[string]string{
-		HeaderActor:  "act_other-operator-001",
-		HeaderTenant: otherTenant,
-		HeaderRole:   RoleOperator,
-		HeaderIdem:   "idk_validate-cross-tenant",
-	}
+	other := headersFor("act_other-operator-001", otherTenant, RoleOperator,
+		"idk_validate-cross-tenant")
 	reply, problem := doJSON(t, "POST",
 		env.api.URL+"/v1/experiments/"+testExperimentID+"/validation",
 		mustBody(t, map[string]any{"records": fixtureRecords(t), "now": fixtureNow}),
@@ -454,11 +482,11 @@ func collectorEvent(n int) map[string]any {
 	}
 }
 
-func TestEffectsForwardToTheIsolatedBroker(t *testing.T) {
-	env := newTestEnv(t)
-	proposal := map[string]any{
+// effectProposal is a valid A2 effect for the enrolled broker run.
+func effectProposal(id string) map[string]any {
+	return map[string]any{
 		"kind": "Effect", "api_version": "v1",
-		"id":        "eff_" + "1a2b3c4d5e6f7081",
+		"id":        id,
 		"tenant_id": testTenant, "run_id": brokerRunID,
 		"actor": "act_worker-reference-01", "action_class": "A2",
 		"proposed_action": map[string]any{
@@ -473,6 +501,11 @@ func TestEffectsForwardToTheIsolatedBroker(t *testing.T) {
 		},
 		"created_at": fixtureNow,
 	}
+}
+
+func TestEffectsForwardToTheIsolatedBroker(t *testing.T) {
+	env := newTestEnv(t)
+	proposal := effectProposal("eff_" + "1a2b3c4d5e6f7081")
 	reply, body := doJSON(t, "POST", env.api.URL+"/v1/effects/authorizations",
 		mustBody(t, proposal), headers(RoleService, "idk_authorize-proxy-1"))
 	if reply.StatusCode != http.StatusOK {
@@ -533,23 +566,7 @@ func TestStopRunFencesGovernorAndExecutesBrokerStop(t *testing.T) {
 	if reply.StatusCode != http.StatusOK || body["state"] == "active" {
 		t.Fatalf("run after stop: %d %v", reply.StatusCode, body)
 	}
-	proposal := map[string]any{
-		"kind": "Effect", "api_version": "v1",
-		"id":        "eff_" + "2b3c4d5e6f708102",
-		"tenant_id": testTenant, "run_id": brokerRunID,
-		"actor": "act_worker-reference-01", "action_class": "A2",
-		"proposed_action": map[string]any{
-			"operation": "queue.publish", "resource": "patch-export-beta",
-			"destination":      "sink:patch-export-beta",
-			"arguments_digest": "sha256:" + strings.Repeat("a", 64),
-			"size_bytes":       128,
-		},
-		"state": "PROPOSED",
-		"transitions": []map[string]any{
-			{"state": "PROPOSED", "at": fixtureNow},
-		},
-		"created_at": fixtureNow,
-	}
+	proposal := effectProposal("eff_" + "2b3c4d5e6f708102")
 	reply, body = doJSON(t, "POST", env.api.URL+"/v1/effects/authorizations",
 		mustBody(t, proposal), headers(RoleService, "idk_authorize-fenced"))
 	if reply.StatusCode != http.StatusOK {
@@ -642,10 +659,7 @@ func TestClaimsAssessStoreAndRead(t *testing.T) {
 	// Another tenant sees nothing.
 	reply, problem := doJSON(t, "GET",
 		env.api.URL+"/v1/assurance-claims/"+claimID,
-		nil, map[string]string{
-			HeaderActor: "act_other-operator-001", HeaderTenant: otherTenant,
-			HeaderRole: RoleOperator,
-		})
+		nil, headersFor("act_other-operator-001", otherTenant, RoleOperator, ""))
 	if reply.StatusCode != http.StatusNotFound || problem["code"] != "claim_unknown" {
 		t.Fatalf("cross-tenant claim: %d %v", reply.StatusCode, problem)
 	}
@@ -731,12 +745,174 @@ func TestIdempotencyReplayAndConflict(t *testing.T) {
 
 	// A mutation without a key is a client error.
 	reply, problem = doJSON(t, "POST", env.api.URL+"/v1/experiments",
-		document, map[string]string{
-			HeaderActor: "act_platform-control-01", HeaderTenant: testTenant,
-			HeaderRole: RoleService,
-		})
+		document, headersFor("act_platform-control-01", testTenant,
+			RoleService, ""))
 	if reply.StatusCode != http.StatusBadRequest ||
 		problem["code"] != "idempotency_key_required" {
 		t.Fatalf("missing key: %d %v", reply.StatusCode, problem)
+	}
+}
+
+// T027: identity binds to the verified token, never to headers a
+// client sends. A worker holding forged supervisor headers stays a
+// worker, and a foreign tenant stays foreign.
+func TestIdentityComesFromTheTokenNotTheHeaders(t *testing.T) {
+	env := newTestEnv(t)
+	forged := headers(RoleWorker, "idk_forge-role-00001")
+	forged[HeaderRole] = RoleOperator // ignored: the token says worker
+	forged[HeaderTenant] = testTenant
+	reply, problem := doJSON(t, "POST", env.api.URL+"/v1/experiments",
+		mustBody(t, draftExperiment(t)), forged)
+	if reply.StatusCode != http.StatusForbidden || problem["code"] != "role_forbidden" {
+		t.Fatalf("forged role headers took hold: %d %v", reply.StatusCode, problem)
+	}
+	if problem["message"] != "the worker role cannot create an experiment" {
+		t.Fatalf("refusal names the token's role: %v", problem["message"])
+	}
+
+	// A foreign tenant with a forged tenant header still sees nothing.
+	createDraftExperiment(t, env, "idk_forge-tenant-0001")
+	foreign := headersFor("act_other-operator-001", otherTenant, RoleOperator,
+		"idk_forge-tenant-0002")
+	foreign[HeaderTenant] = testTenant // ignored: the token says other
+	reply, problem = doJSON(t, "POST",
+		env.api.URL+"/v1/experiments/"+testExperimentID+"/validation",
+		mustBody(t, map[string]any{"records": fixtureRecords(t), "now": fixtureNow}),
+		foreign)
+	if reply.StatusCode != http.StatusNotFound || problem["code"] != "experiment_unknown" {
+		t.Fatalf("forged tenant header reached across tenants: %d %v",
+			reply.StatusCode, problem)
+	}
+}
+
+// T027: only tokens the front end signed authenticate, and only while
+// fresh. Liveness stays open.
+func TestUnverifiableTokensAreRefused(t *testing.T) {
+	env := newTestEnv(t)
+	cases := map[string]string{
+		"expired token": "Bearer " + MintPrincipalToken(testPrivateKey(),
+			"act_platform-control-01", testTenant, RoleService,
+			time.Now().UTC().Add(-time.Minute).Format(time.RFC3339)),
+		"wrong signer": func() string {
+			_, stranger, err := ed25519.GenerateKey(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return "Bearer " + MintPrincipalToken(stranger,
+				"act_platform-control-01", testTenant, RoleService,
+				time.Now().UTC().Add(time.Hour).Format(time.RFC3339))
+		}(),
+		"garbage bearer": "Bearer not-a-token",
+		"foreign scheme": "Basic dXNlcjpwYXNz",
+	}
+	for name, authorization := range cases {
+		reply, problem := doJSON(t, "POST", env.api.URL+"/v1/experiments",
+			mustBody(t, draftExperiment(t)), map[string]string{
+				"Authorization": authorization,
+				HeaderIdem:      "idk_auth-" + strings.ReplaceAll(name, " ", "-"),
+			})
+		if reply.StatusCode != http.StatusUnauthorized ||
+			problem["code"] != "unauthenticated" {
+			t.Fatalf("%s: %d %v", name, reply.StatusCode, problem)
+		}
+	}
+
+	// Liveness stays open: no token required.
+	reply, body := doJSON(t, "GET", env.api.URL+"/healthz", nil, nil)
+	if reply.StatusCode != http.StatusOK || body["status"] != "ok" {
+		t.Fatalf("healthz: %d %v", reply.StatusCode, body)
+	}
+}
+
+// T027: workers cannot issue effect permits. The service role drives
+// the broker authority; the broker refuses a worker's own request.
+func TestWorkersCannotIssueEffectPermits(t *testing.T) {
+	env := newTestEnv(t)
+	reply, problem := doJSON(t, "POST", env.api.URL+"/v1/effects/authorizations",
+		mustBody(t, effectProposal("eff_"+"3c4d5e6f70810303")),
+		headers(RoleWorker, "idk_authorize-worker1"))
+	if reply.StatusCode != http.StatusForbidden {
+		t.Fatalf("worker authorize: %d %v", reply.StatusCode, problem)
+	}
+	// Collectors fare no better.
+	reply, problem = doJSON(t, "POST", env.api.URL+"/v1/effects/authorizations",
+		mustBody(t, effectProposal("eff_"+"4d5e6f7081030304")),
+		headers(RoleCollector, "idk_authorize-collect"))
+	if reply.StatusCode != http.StatusForbidden {
+		t.Fatalf("collector authorize: %d %v", reply.StatusCode, problem)
+	}
+}
+
+// T027: levers engage and never disengage. Fences relax only through
+// the governor's reviewed cleanup path, not through this API.
+func TestLeversEngageButNeverDisengage(t *testing.T) {
+	env := newTestEnv(t)
+	createDraftExperiment(t, env, "idk_create-sticky-0001")
+	validateExperiment(t, env, testExperimentID, "idk_validate-sticky1")
+	reply, body := doJSON(t, "POST",
+		env.api.URL+"/v1/experiments/"+testExperimentID+"/runs",
+		mustBody(t, map[string]any{
+			"run_id": brokerRunID, "allowed_primitives": []string{"queue.publish"},
+		}), headers(RoleService, "idk_run-sticky-00000001"))
+	if reply.StatusCode != http.StatusCreated {
+		t.Fatalf("start run: %d %v", reply.StatusCode, body)
+	}
+
+	reply, body = doJSON(t, "POST", env.api.URL+"/v1/safety-levers/tenant/engage",
+		mustBody(t, map[string]any{"reason": "customer incident"}),
+		headers(RoleCustomer, "idk_lever-sticky-001"))
+	if reply.StatusCode != http.StatusOK {
+		t.Fatalf("engage: %d %v", reply.StatusCode, body)
+	}
+	for _, verb := range []string{"disengage", "release", "relax"} {
+		reply, _ := doJSON(t, "POST",
+			env.api.URL+"/v1/safety-levers/tenant/"+verb,
+			mustBody(t, map[string]any{}),
+			headers(RoleOperator, "idk_lever-"+verb+"-0001"))
+		if reply.StatusCode != http.StatusNotFound {
+			t.Fatalf("lever %s route exists: %d", verb, reply.StatusCode)
+		}
+	}
+	// The fence still holds after the attempts: a run start stays
+	// refused with tenant_fenced.
+	reply, problem := doJSON(t, "POST",
+		env.api.URL+"/v1/experiments/"+testExperimentID+"/runs",
+		mustBody(t, map[string]any{"allowed_primitives": []string{"queue.publish"}}),
+		headers(RoleService, "idk_lever-still-on-01"))
+	if reply.StatusCode != http.StatusConflict || problem["code"] != "tenant_fenced" {
+		t.Fatalf("fence relaxed after disengage attempts: %d %v",
+			reply.StatusCode, problem)
+	}
+}
+
+// T027: the bearer credential stops at the API. The broker sees the
+// identity the API derived, never the token itself.
+func TestTheTokenStopsAtTheAPIThreshold(t *testing.T) {
+	var sawAuthorization string
+	upstream := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			sawAuthorization = r.Header.Get("Authorization")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte("{}"))
+		}))
+	defer upstream.Close()
+	brokerURL, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(governor.New(nil), &evidence.Server{Recorder: evidence.New()},
+		control.NewAssurer(), nil, brokerURL,
+		NewAuthenticator(testPrivateKey().Public().(ed25519.PublicKey)))
+	monolith := httptest.NewServer(server.Handler())
+	defer monolith.Close()
+
+	reply, _ := doJSON(t, "POST", monolith.URL+"/v1/effects/authorizations",
+		mustBody(t, effectProposal("eff_"+"5e6f708103030305")),
+		headers(RoleService, "idk_token-strip-0001"))
+	if reply.StatusCode != http.StatusOK {
+		t.Fatalf("authorize: %d", reply.StatusCode)
+	}
+	if sawAuthorization != "" {
+		t.Fatal("the bearer token reached the broker")
 	}
 }
