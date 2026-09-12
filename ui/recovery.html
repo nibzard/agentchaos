@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gauntlet — recovery and governance</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.1rem; }
+    section { margin-bottom: 1.25rem; }
+    .lever { border: 2px solid #b00020; padding: .75rem; }
+    .lever.ready { border-color: #2e7d32; }
+    .lever.broken { background: #fff2f2; }
+    .board { border-left: 4px solid #ccc; padding-left: .75rem; }
+    .audit { border-left: 4px solid #6a1b9a; padding-left: .75rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin-bottom: .35rem; }
+    .missing { color: #b00020; font-weight: 600; }
+    .empty { color: #777; }
+    code { background: #f4f4f4; padding: 0 .2rem; border-radius: 3px;
+           word-break: break-all; }
+  </style>
+</head>
+<body>
+  <!-- The control plane renders the recovery board into this island.
+       The values below are a synthetic example. -->
+  <script type="application/json" id="recovery-data">
+{
+  "kind": "RecoveryBoard",
+  "api_version": "v1",
+  "fenced": [
+    {
+      "scope_kind": "experiment",
+      "scope_id": "exp_isoreexec0001",
+      "reason": "unauthorized write attempt",
+      "fenced_at": "2026-09-12T00:10:00Z",
+      "by": "act_operator-ona01"
+    }
+  ],
+  "unknown_effects": [
+    {
+      "effect_id": "eff_pending000001",
+      "description": "a dispatched write with no receipt",
+      "correlation_id": "cid_effect0001",
+      "discovered_at": "2026-09-12T00:11:00Z"
+    }
+  ],
+  "dirty_environments": [
+    {
+      "environment_id": "env_sandbox00000001",
+      "run_id": "run_isoreexec0001",
+      "terminal_state": "DIRTY_QUARANTINED",
+      "since": "2026-09-12T00:12:00Z"
+    }
+  ],
+  "compensation": [
+    {
+      "attempt_id": "cmp_refund00000001",
+      "target": "tenant:retail-partner",
+      "status": "pending",
+      "amount_micros": 2500000,
+      "currency": "USD",
+      "receipt_digest": null
+    }
+  ],
+  "cleanup_receipts": [
+    {
+      "receipt_id": "rcp_cleanup0000001",
+      "environment_id": "env_sandbox00000001",
+      "verified_by": "act_verifier-ext01",
+      "digest": "sha256:ababababababababababababababababababababababababababababababababababababababababababababababababababababab",
+      "at": "2026-09-12T01:00:00Z"
+    }
+  ],
+  "lever": {
+    "accessible": true,
+    "path": "/v1/safety-levers/tenant/engage",
+    "authorized_operators": ["act_operator-ona01"]
+  },
+  "audit_trail": [
+    {
+      "entry_id": "aud_policy000000001",
+      "kind": "policy_change",
+      "action": "tightened the external-write allowlist",
+      "actor": "act_operator-ona01",
+      "at": "2026-09-11T00:00:00Z"
+    }
+  ]
+}
+  </script>
+  <main id="app" aria-live="polite">
+    <p>loading…</p>
+  </main>
+  <script type="module" src="dist/recovery.js"></script>
+</body>
+</html>

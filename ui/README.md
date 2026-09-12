@@ -20,14 +20,19 @@ ui/src/compare.ts        comparison and assurance view: frontier
                          columns, paired-difference classification,
                          scoped claim cards
 ui/src/compare.test.ts   comparison suite
+ui/src/recovery.ts       recovery and governance view: fenced groups,
+                         unknown effects, dirty environments, lever
+ui/src/recovery.test.ts  recovery suite
 ui/src/main.ts           overview page entry: data island -> page
 ui/src/builder-page.ts   builder page entry: islands -> builder panel
 ui/src/timeline-page.ts  timeline page entry: island -> lanes
 ui/src/compare-page.ts   comparison page entry: islands -> frontier
+ui/src/recovery-page.ts  recovery page entry: island -> board
 ui/index.html            overview shell with a synthetic example island
 ui/builder.html          builder shell with example islands
 ui/timeline.html         timeline shell with a synthetic example island
 ui/compare.html          comparison shell with synthetic example islands
+ui/recovery.html         recovery shell with a synthetic example island
 ```
 
 ## Data flow
@@ -145,3 +150,21 @@ utility/safety/latency/cost frontier and scoped assurance cards.
   target, dependence assumptions, and expiration. Status text says
   "supported within scope only"; nothing on the page claims
   universal safety.
+
+## Recovery and governance
+
+`recovery.ts` (spec 17.6, T035) renders the recovery board.
+
+- The emergency safety lever section renders first and always. When
+  reachable it names its authorized operators and same-origin path;
+  when not, it states that as a defect with the same prominence.
+- Dirty and quarantined environments stay visible, and an unknown
+  cleanup state reads "unknown — treated as dirty", never clean. A
+  clean environment on the dirty list is a parse error.
+- Unknown effects state that resolution requires verified evidence,
+  not the passage of time. Compensation attempts without a receipt
+  say "no receipt"; failed attempts call for follow-up.
+- Policy changes and exceptional incident closures render in their
+  own audit trail, separate from run operations. There is no human
+  approval inbox anywhere: routine operation never queues a human
+  approval, so the page has none to show.

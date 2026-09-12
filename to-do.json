@@ -932,7 +932,7 @@
       "id": "T035",
       "title": "Build the recovery and governance UI",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Show fenced groups, unknown effects, dirty environments, compensation attempts, cleanup receipts, emergency safety controls, and policy audit history.",
       "depends_on": [
         "T009",
@@ -943,7 +943,16 @@
       "tags": [
         "ui",
         "governance"
-      ]
+      ],
+      "files": [
+        "ui/src/recovery.ts",
+        "ui/src/recovery.test.ts",
+        "ui/src/recovery-page.ts",
+        "ui/recovery.html",
+        "ui/package.json",
+        "ui/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T036",
