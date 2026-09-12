@@ -219,7 +219,7 @@
       "id": "T007",
       "title": "Implement the effect broker state machine",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Implement proposed, authorized, prepared, committing, committed, denied, expired, cancelled, unknown-effect, and compensating states.",
       "steps": [
         "Bind authorization to tenant, task, actor, resource, destination, argument digest, policy version, expiry, and nonce.",
@@ -233,7 +233,27 @@
       "tags": [
         "broker",
         "effects"
-      ]
+      ],
+      "files": [
+        "broker/go.mod",
+        "broker/README.md",
+        "broker/.gitignore",
+        "broker/contract.go",
+        "broker/policy.go",
+        "broker/policy.json",
+        "broker/default_policy.go",
+        "broker/broker.go",
+        "broker/evidence.go",
+        "broker/sink.go",
+        "broker/server.go",
+        "broker/cmd/brokerd/main.go",
+        "broker/contract_test.go",
+        "broker/policy_test.go",
+        "broker/broker_test.go",
+        "broker/server_test.go",
+        "broker/crosslang_test.go"
+      ],
+      "updated_at": "2026-09-12T06:20:00Z"
     },
     {
       "id": "T008",

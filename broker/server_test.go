@@ -223,8 +223,27 @@ func TestCommitEndpointRoundTrip(t *testing.T) {
 	if replayed["state"] != StateCommitted {
 		t.Fatalf("replay state: %v", replayed["state"])
 	}
-	if len(broker.Events()) != 2 {
-		t.Fatalf("events: %d", len(broker.Events()))
+	if len(broker.Events()) != 3 {
+		t.Fatalf("events: %d (decision, stage, receipt)", len(broker.Events()))
+	}
+	if dispatch := nested(committed, "dispatch", "idempotency_key"); dispatch != "idk_commit-0010" {
+		t.Fatalf("dispatch idempotency key: %v", dispatch)
+	}
+}
+
+func TestCommitRequiresIdempotencyKey(t *testing.T) {
+	// The commit mutation is bound to its key: the dispatch record
+	// carries it downstream (spec 18.3, spec 10.1).
+	server, _ := testServer(t)
+	headers := serviceHeaders("")
+	delete(headers, HeaderIdem)
+	reply, body := doJSON(t, "POST", server.URL+"/v1/effects/eff_0000000000000000/commit",
+		nil, headers)
+	if reply.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status: %d", reply.StatusCode)
+	}
+	if body["code"] != "idempotency_key_required" {
+		t.Fatalf("code: %v", body["code"])
 	}
 }
 
@@ -450,8 +469,10 @@ func TestCommitTransitionProblemsOverHTTP(t *testing.T) {
 	}
 }
 
-func TestCommitAfterUnknownOutcomeConflictsOverHTTP(t *testing.T) {
-	// AC-010 over HTTP: a timeout stays fenced behind reconciliation.
+func TestRetryAfterUnknownReconcilesOverHTTP(t *testing.T) {
+	// AC-010 over HTTP: the retry on an UNKNOWN_EFFECT effect performs
+	// the state read. The default reconciler finds no receipt, so the
+	// send never took effect and the effect lands CANCELLED.
 	broker := testBroker(t, &SyntheticSink{Responder: func(*Effect) SinkResult {
 		return SinkResult{Outcome: OutcomeTimeout}
 	}})
@@ -465,11 +486,47 @@ func TestCommitAfterUnknownOutcomeConflictsOverHTTP(t *testing.T) {
 		nil, serviceHeaders("idk_unknown-0002")); reply.StatusCode != http.StatusOK || first["state"] != StateUnknown {
 		t.Fatalf("first commit: %d %+v", reply.StatusCode, first)
 	}
-	reply, problem := doJSON(t, "POST",
+	reply, resolved := doJSON(t, "POST",
 		fmt.Sprintf("%s/v1/effects/%s/commit", server.URL, effectID),
 		nil, serviceHeaders("idk_unknown-0003"))
-	if reply.StatusCode != http.StatusConflict || problem["state"] != StateUnknown {
-		t.Fatalf("retry after UNKNOWN_EFFECT: %d %+v", reply.StatusCode, problem)
+	if reply.StatusCode != http.StatusOK || resolved["state"] != StateCancelled {
+		t.Fatalf("reconciling retry: %d %+v", reply.StatusCode, resolved)
+	}
+}
+
+func TestCompensatingEffectOverHTTP(t *testing.T) {
+	// A compensation proposal carries compensation_of; it authorizes
+	// against the COMMITTED original and commits through COMPENSATING.
+	server, broker := testServer(t)
+	_, body := doJSON(t, "POST", server.URL+"/v1/effects/authorizations",
+		mustJSON(t, validProposalJSON()), serviceHeaders("idk_comp-0001"))
+	original := nested(body, "effect", "id").(string)
+	if reply, committed := doJSON(t, "POST",
+		fmt.Sprintf("%s/v1/effects/%s/commit", server.URL, original),
+		nil, serviceHeaders("idk_comp-0002")); reply.StatusCode != http.StatusOK || committed["state"] != StateCommitted {
+		t.Fatalf("original commit: %d %+v", reply.StatusCode, committed)
+	}
+
+	proposal := freshProposal(0xd00d)
+	proposal["compensation_of"] = original
+	reply, authorized := doJSON(t, "POST", server.URL+"/v1/effects/authorizations",
+		mustJSON(t, proposal), serviceHeaders("idk_comp-0003"))
+	if reply.StatusCode != http.StatusOK || nested(authorized, "decision", "verdict") != "allow" {
+		t.Fatalf("compensation authorize: %d %+v", reply.StatusCode, authorized)
+	}
+	compensationID := nested(authorized, "effect", "id").(string)
+	reply, compensated := doJSON(t, "POST",
+		fmt.Sprintf("%s/v1/effects/%s/commit", server.URL, compensationID),
+		nil, serviceHeaders("idk_comp-0004"))
+	if reply.StatusCode != http.StatusOK || compensated["state"] != StateCommitted {
+		t.Fatalf("compensation commit: %d %+v", reply.StatusCode, compensated)
+	}
+	states := map[string]bool{}
+	for _, effect := range broker.Effects() {
+		states[effect.ID] = effect.State == StateCommitted
+	}
+	if !states[original] || !states[compensationID] {
+		t.Fatalf("both effects must rest COMMITTED: %v", states)
 	}
 }
 

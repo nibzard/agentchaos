@@ -148,7 +148,7 @@ func (s *Server) commit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	effect, err := s.Broker.Commit(principal, effectID)
+	effect, err := s.Broker.Commit(principal, effectID, key)
 	if err != nil {
 		s.Broker.Release(principal.TenantID, key, digest)
 		var transition *TransitionError

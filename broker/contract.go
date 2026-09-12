@@ -279,8 +279,9 @@ func (e *Effect) ValidateProposal() []ContractError {
 	if e.Receipt != nil {
 		add("receipt", "$.receipt", "a proposal cannot already carry a receipt")
 	}
-	if e.CompensationOf != "" {
-		add("compensation_of", "$.compensation_of", "only a compensating effect references another effect")
+	if e.CompensationOf != "" && !reEffectID.MatchString(e.CompensationOf) {
+		add("compensation_of", "$.compensation_of",
+			"must reference an effect id matching eff_[a-z0-9]{8,64}")
 	}
 	if e.Review != nil {
 		add("review", "$.review",
