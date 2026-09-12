@@ -317,7 +317,7 @@
       "id": "T010",
       "title": "Implement stop and cleanup protocols",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Revoke effect permits, disable injectors, fence delegation groups, cancel pending effects, reconcile receipts, run cleanup verification, and record clean, dirty-quarantined, or unknown terminal state.",
       "depends_on": [
         "T009"
@@ -325,7 +325,23 @@
       "tags": [
         "recovery",
         "cleanup"
-      ]
+      ],
+      "files": [
+        "broker/stop.go",
+        "broker/stop_test.go",
+        "broker/stop_http_test.go",
+        "broker/stop_regression_test.go",
+        "broker/broker.go",
+        "broker/server.go",
+        "broker/sink.go",
+        "broker/delegation.go",
+        "broker/crosslang_test.go",
+        "broker/README.md",
+        "shared/schemas/stop-report.schema.json",
+        "shared/schemas/registry.json",
+        "shared/python/tests/test_registry.py"
+      ],
+      "updated_at": "2026-09-12T12:20:00Z"
     },
     {
       "id": "T011",

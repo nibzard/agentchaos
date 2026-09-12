@@ -105,6 +105,14 @@ func (b *Broker) delegateLocked(principal *Principal, request *DelegationRequest
 			Detail: "the run does not exist in the caller's tenant",
 		}}}
 	}
+	// A stopped run fences its delegation groups (spec 13.3): no new
+	// delegation can be minted under it.
+	if b.stops[effectKey(principal.TenantID, request.RunID)] != nil {
+		return nil, &DelegationRefusal{Errors: []ContractError{{
+			Check: "run_stopped", Path: "$.run_id",
+			Detail: "the run is stopped; its delegation groups are fenced",
+		}}}
+	}
 	scoped := effectKey(principal.TenantID, request.ID)
 	if _, exists := b.delegations[scoped]; exists {
 		return nil, errDelegationExists
@@ -303,18 +311,27 @@ func (b *Broker) RevokeDelegation(principal *Principal, delegationID, reason str
 			principal.TenantID, delegation.TenantID)
 	}
 	if delegation.State == DelegationActive {
-		delegation.State = DelegationRevoked
-		delegation.RevokedAt = b.ClockUTC()
-		// The reason is advisory; long input is truncated, never
-		// amplified into the evidence journal (spec 19).
-		if len(reason) > MaxRevocationReason {
-			reason = reason[:MaxRevocationReason]
-		}
-		b.appendEvent(delegationEvent(delegation, "revoke", b.ClockUTC(), map[string]any{
-			"reason": reason,
-		}))
+		b.revokeLocked(delegation, reason)
 	}
 	return cloneDelegation(delegation), nil
+}
+
+// revokeLocked marks a delegation revoked and journals it. Revoking
+// fences the whole delegation group. The caller holds b.mu.
+func (b *Broker) revokeLocked(delegation *Delegation, reason string) {
+	if delegation.State != DelegationActive {
+		return
+	}
+	delegation.State = DelegationRevoked
+	delegation.RevokedAt = b.ClockUTC()
+	// The reason is advisory; long input is truncated, never
+	// amplified into the evidence journal (spec 19).
+	if len(reason) > MaxRevocationReason {
+		reason = reason[:MaxRevocationReason]
+	}
+	b.appendEvent(delegationEvent(delegation, "revoke", b.ClockUTC(), map[string]any{
+		"reason": reason,
+	}))
 }
 
 // delegationReason applies the delegation scope to an allowed

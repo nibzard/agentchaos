@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/stop-report.schema.json",
+  "title": "StopReport",
+  "description": "Execution record of the stop protocol (spec 13.3, 18.1). Append-only per run: a second stop replays this report. The terminal state arrives only from cleanup verification, never from worker exit; reopened marks a late event that made prior assurance stale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "run_id",
+    "injection_disabled",
+    "sandbox",
+    "steps",
+    "inventory",
+    "verifier",
+    "terminal_state",
+    "reopened",
+    "stopped_at"
+  ],
+  "properties": {
+    "kind": { "const": "StopReport" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": {
+      "type": "string",
+      "pattern": "^sgr_[a-z0-9]{8,64}$",
+      "description": "Stop report id, sgr_ prefix."
+    },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "handoff_id": {
+      "type": "string",
+      "pattern": "^sgh_[a-z0-9]{8,64}$",
+      "description": "Advisory cross-reference to the governor's stop handoff; the broker never depends on the governor to stop."
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "Why the run stopped. Minimized payload (spec 19)."
+    },
+    "injection_disabled": {
+      "type": "boolean",
+      "description": "Injector disablement was ordered; the broker mints no further permits for the run."
+    },
+    "sandbox": {
+      "type": "string",
+      "enum": ["terminate", "preserve"],
+      "description": "Disposition ordered for the sandbox. The order must state one; there is no default (evidence policy decides)."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "description": "The protocol's executed steps in spec 13.3 order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "revoke_new_effect_permits",
+              "disable_injectors",
+              "fence_delegation_group",
+              "cancel_pending_effects",
+              "identify_inflight_and_unknown_effects",
+              "reconcile_service_receipts",
+              "execute_preapproved_compensation",
+              "terminate_or_preserve_sandbox",
+              "run_independent_cleanup_verifier",
+              "record_terminal_state"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["done", "partial"],
+            "description": "Partial when the step could not complete for every effect it touched."
+          },
+          "detail": { "type": "string", "maxLength": 512 }
+        }
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denied",
+        "authorized",
+        "prepared",
+        "committing",
+        "committed",
+        "cancelled",
+        "unknown",
+        "compensations",
+        "committed_meta"
+      ],
+      "description": "The run's effects categorized at the end of the protocol. Buckets hold resting lifecycle states; compensating effects sit in their own bucket.",
+      "properties": {
+        "denied": { "$ref": "#/$defs/effectIdList" },
+        "authorized": { "$ref": "#/$defs/effectIdList" },
+        "prepared": { "$ref": "#/$defs/effectIdList" },
+        "committing": { "$ref": "#/$defs/effectIdList" },
+        "committed": { "$ref": "#/$defs/effectIdList" },
+        "cancelled": { "$ref": "#/$defs/effectIdList" },
+        "unknown": { "$ref": "#/$defs/effectIdList" },
+        "compensations": { "$ref": "#/$defs/effectIdList" },
+        "committed_meta": {
+          "type": "array",
+          "maxItems": 4096,
+          "description": "Where each committed effect pointed, so a dirty artifact can be named.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "action_class", "operation", "resource", "destination"],
+            "properties": {
+              "id": { "$ref": "common.schema.json#/$defs/idEffect" },
+              "action_class": {
+                "type": "string",
+                "enum": ["A1", "A2"]
+              },
+              "operation": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]{1,63}$"
+              },
+              "resource": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._:/-]{2,252}$"
+              },
+              "destination": {
+                "type": "string",
+                "pattern": "^(https?://|sink:)[A-Za-z0-9._:/-]{3,252}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "compensations": {
+      "type": "array",
+      "maxItems": 256,
+      "description": "What each preapproved compensation plan did. Anything less than COMMITTED counts as dirt.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plan", "outcome"],
+        "properties": {
+          "plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "effect_id",
+              "operation",
+              "resource",
+              "destination",
+              "arguments_digest",
+              "action_class"
+            ],
+            "properties": {
+              "effect_id": { "$ref": "common.schema.json#/$defs/idEffect" },
+              "operation": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]{1,63}$"
+              },
+              "resource": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._:/-]{2,252}$"
+              },
+              "destination": {
+                "type": "string",
+                "pattern": "^(https?://|sink:)[A-Za-z0-9._:/-]{3,252}$"
+              },
+              "arguments_digest": { "$ref": "common.schema.json#/$defs/digest" },
+              "action_class": {
+                "type": "string",
+                "enum": ["A1", "A2"]
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1099511627776
+              }
+            }
+          },
+          "effect_id": {
+            "type": "string",
+            "pattern": "^eff_[a-z0-9]{8,64}$",
+            "description": "The minted compensating effect, when the plan authorized one."
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "COMMITTED",
+              "CANCELLED",
+              "UNKNOWN_EFFECT",
+              "DENIED",
+              "ERROR"
+            ]
+          },
+          "detail": { "type": "string", "maxLength": 512 }
+        }
+      }
+    },
+    "quarantined": {
+      "type": "array",
+      "maxItems": 4096,
+      "uniqueItems": true,
+      "description": "Dirty artifacts, as resource@destination. A quarantined artifact cannot be reassigned to a new experiment (spec 13.3).",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9._:/-]{2,252}@(https?://|sink:)[A-Za-z0-9._:/-]{3,252}$"
+      }
+    },
+    "verifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$",
+      "description": "Which cleanup verifier ran. The verdict merges with a records-derived floor; the worse verdict wins."
+    },
+    "terminal_state": {
+      "type": "string",
+      "enum": ["CLEAN", "DIRTY_QUARANTINED", "UNKNOWN"],
+      "description": "CLEAN, DIRTY_QUARANTINED, or UNKNOWN. Never inferred from worker exit."
+    },
+    "reopened": {
+      "type": "boolean",
+      "description": "A late event changed an effect after the terminal state was recorded; prior assurance is stale."
+    },
+    "stopped_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "$defs": {
+    "effectIdList": {
+      "type": "array",
+      "maxItems": 4096,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/idEffect" }
+    }
+  }
+}

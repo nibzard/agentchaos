@@ -14,6 +14,9 @@ POST /v1/effects/authorizations        evaluate a proposal (allow or deny)
 POST /v1/effects/{id}/commit           dispatch a bound effect
 POST /v1/delegations                   mint a child delegation
 POST /v1/delegations/{id}/revocation   fence a delegation group
+POST /v1/runs/{id}/stop                execute the stop protocol
+GET  /v1/runs/{id}/stop                read a run's stop report
+GET  /v1/quarantine                    list the tenant's dirty artifacts
 GET  /healthz                          liveness
 ```
 
@@ -227,6 +230,69 @@ it so the budget stays whole in one place.
 Every mint and revoke lands in the evidence journal as a `delegation`
 event with the broker as its source. Delegation ids are tenant-scoped:
 a cross-tenant lookup is indistinguishable from absence.
+
+## Stop protocol
+
+`POST /v1/runs/{id}/stop` executes the stop protocol (spec 13.3) for
+one run. The stop controller lives in the broker: it already holds
+the permits, effects, delegations, and receipts, and it sits outside
+the worker environment the protocol tears down. The governor ends
+experiment authority and emits a stop handoff; the handoff id in the
+order is an advisory cross-reference. The broker never depends on the
+governor to stop.
+
+The order states the sandbox disposition (`terminate` or `preserve`;
+there is no default — evidence policy decides) and any preapproved
+compensation plans. Service and operator roles may order a stop; a
+worker never can.
+
+The protocol runs ten steps in spec order: revoke new effect permits;
+disable injectors; fence the delegation group; cancel pending effects
+that support cancellation; identify in-flight and unknown effects;
+reconcile service receipts; execute preapproved compensation;
+terminate or preserve the sandbox; run the independent cleanup
+verifier; record the terminal state. Every step lands in the evidence
+journal as a `recovery_action` event with the broker as its source.
+
+The fence is the stop record's presence. `authorizations` denies
+every non-compensation proposal with reason `run_stopped`, dispatch
+cancels pre-stop permits at commit, and no new delegation can be
+minted under the run. Compensations are exempt from the fence and
+dispatch under the stop's own bounded window (now plus the permit
+TTL), because the run's experiment grant has usually ended by the
+time the stop arrives.
+
+Pending effects cancel by state: `AUTHORIZED` never staged and never
+sent, so it cancels outright; `PREPARED` holds a staged write, so it
+cancels only through a sink that implements cancellation — otherwise
+it rests unknown, because a staged write may exist. A dispatch that
+was initiated but never recorded cannot be called off: it rests
+unknown and reconciliation owns it. A busy dispatch gate means an
+operation is running on that record right now; the stop counts the
+effect unresolved instead of waiting, so a hung sink fences only its
+own effect, never the stop protocol (spec 10.2). The late completion
+reopens the report.
+
+The cleanup verifier runs outside the worker environment. The default
+derives its verdict from broker records: unresolved effects mean
+unknown, and a committed, uncompensated A2 effect means dirt. An
+injected verifier (the `WithCleanupVerifier` option) merges with that
+records floor, and the worse verdict wins: a verifier can never
+certify cleaner than the records. The terminal state is `CLEAN`,
+`DIRTY_QUARANTINED`, or `UNKNOWN` — never inferred from worker exit.
+
+Dirty artifacts quarantine as `resource@destination` in a per-tenant
+registry, readable at `GET /v1/quarantine`. A quarantined artifact
+denies at the gate with reason `resource_quarantined`: a dirty
+namespace, queue, artifact, or credential cannot be reassigned to a
+new experiment. Quarantine is tenant-scoped; one tenant's dirt never
+fences another tenant.
+
+The protocol is idempotent per run. The first stop records the
+report; every later stop replays it without re-journaling. A late
+lifecycle event after the terminal state was recorded sets the
+report's `reopened` flag and journals one `stop_reopened` event:
+prior assurance is stale.
 
 ## Later tasks
 

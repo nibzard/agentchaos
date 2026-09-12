@@ -74,6 +74,12 @@
       "file": "target.schema.json",
       "$id": "https://agentchaos.invalid/schemas/v1/target.schema.json",
       "resource_kind": "Target"
+    },
+    {
+      "name": "stop-report",
+      "file": "stop-report.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/stop-report.schema.json",
+      "resource_kind": "StopReport"
     }
   ]
 }

@@ -88,8 +88,10 @@ func (s *SyntheticSink) Dispatch(effect *Effect, now string) SinkResult {
 }
 
 // Reconcile resolves an unknown outcome by reading the sink's own
-// state: a recorded receipt means the send happened; no receipt means
-// it never took effect (spec 10.1: a receipt or state read, never a
+// state: a recorded receipt means the send happened; a staged write
+// without a receipt means the service still holds pending server-side
+// state, which is not "no effect"; only a clean slate means the send
+// never took effect (spec 10.1: a receipt or state read, never a
 // blind reissue).
 func (s *SyntheticSink) Reconcile(effect *Effect, now string) ReconcileResult {
 	if s.Reconciler != nil {
@@ -103,6 +105,20 @@ func (s *SyntheticSink) Reconcile(effect *Effect, now string) ReconcileResult {
 				Outcome:       ReconciledCommitted,
 				ReceiptDigest: receiptDigest(effect),
 				Detail:        fmt.Sprintf("state read at %s found the send", now),
+			}
+		}
+	}
+	// A staged write matters only before any dispatch attempt: then it
+	// is server-side state the service still holds. Once a send was
+	// attempted, the stage says nothing about whether it landed — the
+	// receipt list alone answers that.
+	if effect.Dispatch == nil {
+		for _, staged := range s.Staged {
+			if staged.EffectID == effect.ID {
+				return ReconcileResult{
+					Outcome: ReconciledUnknown,
+					Detail:  fmt.Sprintf("state read at %s found a staged write and no send", now),
+				}
 			}
 		}
 	}

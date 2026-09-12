@@ -47,6 +47,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/effects/{id}/commit", s.commit)
 	mux.HandleFunc("POST /v1/delegations", s.delegate)
 	mux.HandleFunc("POST /v1/delegations/{id}/revocation", s.revokeDelegation)
+	mux.HandleFunc("POST /v1/runs/{id}/stop", s.stopRun)
+	mux.HandleFunc("GET /v1/runs/{id}/stop", s.readStop)
+	mux.HandleFunc("GET /v1/quarantine", s.quarantine)
 	mux.HandleFunc("GET /healthz", s.health)
 	return mux
 }
@@ -311,6 +314,180 @@ func (s *Server) revokeDelegation(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, delegation)
 }
 
+// stopRun executes the stop protocol (spec 13.3) for one run. The
+// order states the sandbox disposition and any preapproved
+// compensations; the reply is the stop report with its terminal
+// state. Idempotent by construction: the first stop records the
+// report and every later stop replays it.
+func (s *Server) stopRun(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",
+			"request body could not be read", false)
+		return
+	}
+	key := r.Header.Get(HeaderIdem)
+	if !reIdemKey.MatchString(key) {
+		writeProblem(w, requestID, http.StatusBadRequest, "idempotency_key_required",
+			"mutations require an Idempotency-Key matching idk_[A-Za-z0-9_-]{8,128}", false)
+		return
+	}
+	runID := r.PathValue("id")
+	if !reRunID.MatchString(runID) {
+		writeProblem(w, requestID, http.StatusBadRequest, "run_id_invalid",
+			"run id must match run_[a-z0-9]{8,64}", false)
+		return
+	}
+	principal := principalFrom(r)
+	if err := s.Broker.CheckAuthority(principal); err != nil {
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	digest := bodyDigest(append(append([]byte(runID), 0), body...))
+	reply, replay, err := s.Broker.Reserve(principal.TenantID, key, digest)
+	if err != nil {
+		writeReservationProblem(w, requestID, err)
+		return
+	}
+	if replay {
+		writeJSON(w, http.StatusOK, reply)
+		return
+	}
+
+	order, err := DecodeStopOrder(runID, body)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusBadRequest, "stop_schema", err.Error(), false)
+		return
+	}
+	if problems := order.ValidateStopOrder(); len(problems) > 0 {
+		s.Broker.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusUnprocessableEntity, "stop_schema",
+			"stop order violates the stop contract", false, WithErrors(problems))
+		return
+	}
+	report, err := s.Broker.Stop(principal, order)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		var refusal *StopRefusal
+		switch {
+		case errors.Is(err, errStopRunUnknown):
+			writeProblem(w, requestID, http.StatusNotFound, "run_not_found",
+				"no such run in the caller's tenant", false)
+		case errors.As(err, &refusal):
+			writeProblem(w, requestID, http.StatusUnprocessableEntity, "stop_refused",
+				"stop order refused", false, WithErrors(refusal.Errors))
+		default:
+			writeAuthProblem(w, requestID, err)
+		}
+		return
+	}
+	s.Broker.Complete(principal.TenantID, key, digest, report)
+	writeJSON(w, http.StatusOK, report)
+}
+
+// readStop returns a run's stop report, or 404 when the run never
+// stopped. Any authenticated principal of the tenant may read it.
+func (s *Server) readStop(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	runID := r.PathValue("id")
+	if !reRunID.MatchString(runID) {
+		writeProblem(w, requestID, http.StatusBadRequest, "run_id_invalid",
+			"run id must match run_[a-z0-9]{8,64}", false)
+		return
+	}
+	principal := principalFrom(r)
+	if principal == nil {
+		writeProblem(w, requestID, http.StatusUnauthorized, "unauthenticated",
+			"caller identity headers are required", false)
+		return
+	}
+	report, err := s.Broker.StopRecord(principal, runID)
+	if err != nil {
+		writeProblem(w, requestID, http.StatusNotFound, "stop_not_found",
+			"no stop report for this run", false)
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
+// quarantine lists the tenant's dirty artifacts. A quarantined
+// artifact cannot be reassigned to a new experiment (spec 13.3).
+func (s *Server) quarantine(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	principal := principalFrom(r)
+	if principal == nil {
+		writeProblem(w, requestID, http.StatusUnauthorized, "unauthenticated",
+			"caller identity headers are required", false)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"tenant_id":   principal.TenantID,
+		"quarantined": s.Broker.Quarantined(principal),
+	})
+}
+
+// stopOrderKeys are the exact accepted spellings of a stop order.
+var stopOrderKeys = map[string]bool{
+	"handoff_id": true, "reason": true, "sandbox": true, "compensations": true,
+}
+
+// DecodeStopOrder parses a stop order body bound to its run path.
+func DecodeStopOrder(runID string, data []byte) (*StopOrder, error) {
+	raw, err := decodeExact(data, stopOrderKeys)
+	if err != nil {
+		return nil, err
+	}
+	if plans, ok := raw["compensations"]; ok {
+		var entries []map[string]json.RawMessage
+		if err := json.Unmarshal(plans, &entries); err != nil {
+			return nil, fmt.Errorf("malformed compensations: %w", err)
+		}
+		for _, entry := range entries {
+			if _, err := decodeExact(mustRemarshal(entry), planKeys); err != nil {
+				return nil, fmt.Errorf("compensations: %w", err)
+			}
+		}
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var body struct {
+		HandoffID     string             `json:"handoff_id"`
+		Reason        string             `json:"reason"`
+		Sandbox       string             `json:"sandbox"`
+		Compensations []CompensationPlan `json:"compensations"`
+	}
+	if err := decoder.Decode(&body); err != nil {
+		return nil, fmt.Errorf("unknown or malformed field: %w", err)
+	}
+	if decoder.More() {
+		return nil, fmt.Errorf("trailing content after JSON document")
+	}
+	return &StopOrder{
+		RunID:         runID,
+		HandoffID:     body.HandoffID,
+		Reason:        body.Reason,
+		Sandbox:       body.Sandbox,
+		Compensations: body.Compensations,
+	}, nil
+}
+
+// planKeys are the exact accepted spellings of a compensation plan.
+var planKeys = map[string]bool{
+	"effect_id": true, "operation": true, "resource": true,
+	"destination": true, "arguments_digest": true, "action_class": true,
+	"size_bytes": true,
+}
+
+func mustRemarshal(value map[string]json.RawMessage) []byte {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return []byte("{}")
+	}
+	return encoded
+}
+
 // Exact key sets for delegation decoding. Non-contract spellings
 // fail closed, exactly like proposals (AC-001, spec 18.3).
 var (
@@ -451,6 +628,7 @@ func writeAuthProblem(w http.ResponseWriter, requestID string, err error) {
 		strings.Contains(message, "cannot commit"),
 		strings.Contains(message, "cannot delegate"),
 		strings.Contains(message, "cannot revoke"),
+		strings.Contains(message, "cannot stop"),
 		strings.Contains(message, "cannot drive broker authority"):
 		writeProblem(w, requestID, http.StatusForbidden, "role_forbidden",
 			message, false)

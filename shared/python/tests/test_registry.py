@@ -18,6 +18,7 @@ def test_registry_covers_every_resource(registry):
         "Finding",
         "AssuranceClaim",
         "Target",
+        "StopReport",
     }
     assert set(registry.known_kinds) == expected
 

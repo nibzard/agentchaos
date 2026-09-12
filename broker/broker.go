@@ -126,14 +126,28 @@ type Broker struct {
 	runs   map[string]*RunContext
 	sinks  []Sink
 	now    func() time.Time
+	// verifier runs the independent cleanup check (spec 13.3). Nil
+	// means the records-derived default.
+	verifier CleanupVerifier
 
 	mu          sync.Mutex
-	effects     map[string]*Effect        // by tenant-scoped key
-	delegations map[string]*Delegation    // by tenant-scoped key
-	events      []EvidenceEvent           // append-only journal
-	idempotency map[string]idempotentCall // by tenant-scoped key
-	sequences   map[string]int64          // per source
-	dispatchers map[string]*sync.Mutex    // per-effect dispatch serialization
+	effects     map[string]*Effect         // by tenant-scoped key
+	delegations map[string]*Delegation     // by tenant-scoped key
+	stops       map[string]*StopReport     // by tenant-scoped run key; presence = stopped
+	quarantine  map[string]map[string]bool // tenant -> dirty resource@destination
+	events      []EvidenceEvent            // append-only journal
+	idempotency map[string]idempotentCall  // by tenant-scoped key
+	sequences   map[string]int64           // per source
+	dispatchers map[string]*sync.Mutex     // per-effect dispatch serialization
+}
+
+// Option configures a broker at construction.
+type Option func(*Broker)
+
+// WithCleanupVerifier injects the independent cleanup verifier
+// (spec 13.3). The default derives its verdict from broker records.
+func WithCleanupVerifier(verifier CleanupVerifier) Option {
+	return func(b *Broker) { b.verifier = verifier }
 }
 
 type idempotentCall struct {
@@ -160,22 +174,28 @@ func ledgerKey(tenantID, key string) string {
 
 // New builds a broker from a policy, the run contexts it serves, and
 // the sinks it may dispatch through.
-func New(policy *Policy, runs []*RunContext, sinks []Sink) *Broker {
+func New(policy *Policy, runs []*RunContext, sinks []Sink, opts ...Option) *Broker {
 	index := make(map[string]*RunContext, len(runs))
 	for _, run := range runs {
 		index[run.RunID] = run
 	}
-	return &Broker{
+	broker := &Broker{
 		policy:      policy,
 		runs:        index,
 		sinks:       sinks,
 		now:         time.Now,
+		stops:       make(map[string]*StopReport),
+		quarantine:  make(map[string]map[string]bool),
 		effects:     make(map[string]*Effect),
 		delegations: make(map[string]*Delegation),
 		idempotency: make(map[string]idempotentCall),
 		sequences:   make(map[string]int64),
 		dispatchers: make(map[string]*sync.Mutex),
 	}
+	for _, opt := range opts {
+		opt(broker)
+	}
+	return broker
 }
 
 // dispatchGate serializes dispatch and reconciliation attempts on one
@@ -320,7 +340,37 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 
 	now := b.ClockUTC()
 	run := b.runs[proposal.RunID]
-	verdict := b.policy.Evaluate(proposal, run, now)
+	// A stopped run fences new permits (spec 13.3): the only proposals
+	// still allowed are the stop protocol's own compensations, which
+	// dispatch under the stop's bounded window because the run's
+	// experiment grant has usually ended. Everything else denies with
+	// run_stopped — a deny is a successful, journaled evaluation.
+	stopped := b.stops[effectKey(principal.TenantID, proposal.RunID)] != nil
+	gateRun := run
+	var verdict GateVerdict
+	if stopped && proposal.CompensationOf == "" {
+		verdict = GateVerdict{
+			Reason:     "run_stopped",
+			PolicyRefs: []string{b.policy.ref("runs." + proposal.RunID)},
+		}
+	} else {
+		if stopped && run != nil {
+			window := *run
+			window.GrantExpiresAt = b.now().UTC().Add(PermitTTL).
+				Format("2006-01-02T15:04:05Z")
+			gateRun = &window
+		}
+		verdict = b.policy.Evaluate(proposal, gateRun, now)
+	}
+	// A dirty artifact cannot be reassigned to a new experiment
+	// (spec 13.3): quarantined resources deny even before compensation
+	// and delegation narrowing apply.
+	if verdict.Allowed && b.quarantinedArtifact(principal.TenantID, proposal.ProposedAction) {
+		verdict = GateVerdict{
+			Reason:     "resource_quarantined",
+			PolicyRefs: []string{b.policy.ref("quarantine." + proposal.ProposedAction.Resource)},
+		}
+	}
 
 	// A compensating effect is a new authorized effect that references
 	// a COMMITTED original (spec 10.1). The reference must resolve
@@ -369,10 +419,10 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 	}
 
 	authorization := &Authorization{
-		TaskID:        run.TaskID,
+		TaskID:        gateRun.TaskID,
 		PolicyVersion: b.policy.Version,
 		PolicyDigest:  b.policy.digest,
-		ExpiresAt:     b.permitExpiry(run),
+		ExpiresAt:     b.permitExpiry(gateRun),
 		Nonce:         mintNonce(),
 		AuthorizedAt:  now,
 	}
@@ -467,6 +517,18 @@ func (b *Broker) dispatchLocked(effect *Effect, now, idemKey string) (*Effect, e
 		// an inconsistent record never dispatches (spec 10 binding).
 		return nil, &TransitionError{EffectID: effect.ID, From: effect.State,
 			Why: "permit task binding does not match the run"}
+	}
+
+	// A stopped run fences permits minted before the stop (spec 13.3:
+	// revoke new effect permits — and a permit that already exists
+	// must not outlive the order either). The stop's own compensations
+	// dispatch; everything else cancels. Like the delegation fence,
+	// this recheck lands at dispatch because a stop can arrive between
+	// authorize and commit.
+	if b.stops[effectKey(effect.TenantID, effect.RunID)] != nil && effect.CompensationOf == "" {
+		b.transitionTo(effect, StateCancelled, now)
+		return nil, &TransitionError{EffectID: effect.ID, From: StateCancelled,
+			Why: "run stopped; the effect is fenced"}
 	}
 
 	// A revoked delegation fences its whole group, including permits
@@ -632,7 +694,9 @@ func (b *Broker) reconcileLocked(effect *Effect, now string) (*Effect, error) {
 }
 
 // transitionTo appends one append-only lifecycle step (spec 18.1).
-// The caller holds b.mu.
+// A real transition on an effect whose run already recorded a stop's
+// terminal state reopens the report: late events mark prior assurance
+// stale (spec 13.3). The caller holds b.mu.
 func (b *Broker) transitionTo(effect *Effect, state, at string) {
 	if effect.State == state || !canTransition(effect.State, state) {
 		return // no-op edges never append fabricated history
@@ -640,6 +704,7 @@ func (b *Broker) transitionTo(effect *Effect, state, at string) {
 	effect.State = state
 	effect.Transitions = append(effect.Transitions,
 		Transition{State: state, At: at, Actor: brokerSourceID})
+	b.reopenIfStoppedLocked(effect)
 }
 
 func (b *Broker) checkPrincipal(principal *Principal, tenantID, action string) error {

@@ -171,12 +171,65 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 	}
 	documents["delegation_empty_caps"] = empty
 
+	// Stop reports: a compensated clean stop and a dirty, quarantined
+	// stop (spec 13.3).
+	stops := testBroker(t, &SyntheticSink{})
+	compensatedTarget := testEffect()
+	compensatedTarget.ID = "eff_100000000000000d"
+	if _, _, err := stops.Authorize(servicePrincipal(), compensatedTarget); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := stops.Commit(servicePrincipal(), compensatedTarget.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	cleanOrder := &StopOrder{RunID: testRun().RunID, Sandbox: SandboxPreserve, Reason: "crosslang"}
+	cleanOrder.Compensations = []CompensationPlan{{
+		EffectID:        compensatedTarget.ID,
+		Operation:       compensatedTarget.ProposedAction.Operation,
+		Resource:        compensatedTarget.ProposedAction.Resource,
+		Destination:     compensatedTarget.ProposedAction.Destination,
+		ArgumentsDigest: compensatedTarget.ProposedAction.ArgumentsDigest,
+		ActionClass:     compensatedTarget.ActionClass,
+		SizeBytes:       compensatedTarget.ProposedAction.SizeBytes,
+	}}
+	cleanReport, err := stops.Stop(servicePrincipal(), cleanOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["stop_report_clean"] = cleanReport
+
+	// A second stop on the same broker would replay the recorded report,
+	// so the dirty scenario runs on its own broker: a committed,
+	// uncompensated A2 effect quarantines its artifact.
+	dirtyBroker := testBroker(t, &SyntheticSink{})
+	dirtyTarget := testEffect()
+	dirtyTarget.ID = "eff_100000000000000e"
+	if _, _, err := dirtyBroker.Authorize(servicePrincipal(), dirtyTarget); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dirtyBroker.Commit(servicePrincipal(), dirtyTarget.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	dirtyReport, err := dirtyBroker.Stop(servicePrincipal(), &StopOrder{
+		RunID: testRun().RunID, Sandbox: SandboxTerminate, HandoffID: "sgh_crosslang00001",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["stop_report_dirty"] = dirtyReport
+
 	// Every evidence event the broker can emit in these flows.
 	for i, event := range main.Events() {
 		documents[fmt.Sprintf("event_%02d", i)] = event
 	}
 	for i, event := range delegations.Events() {
 		documents[fmt.Sprintf("event_delegation_%02d", i)] = event
+	}
+	for i, event := range stops.Events() {
+		documents[fmt.Sprintf("event_stop_%02d", i)] = event
+	}
+	for i, event := range dirtyBroker.Events() {
+		documents[fmt.Sprintf("event_stop_dirty_%02d", i)] = event
 	}
 	for i, event := range timeout.Events() {
 		documents[fmt.Sprintf("event_timeout_%02d", i)] = event
