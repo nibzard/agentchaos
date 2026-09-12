@@ -1300,7 +1300,7 @@
       "id": "T048",
       "title": "Implement the MCP adapter",
       "priority": 4,
-      "status": "todo",
+      "status": "done",
       "details": "Add a Model Context Protocol adapter that preserves audience-bound authorization and avoids downstream token passthrough.",
       "depends_on": [
         "T039"
@@ -1308,7 +1308,14 @@
       "tags": [
         "p1",
         "adapter"
-      ]
+      ],
+      "files": [
+        "execution-plane/gauntlet_adapters/mcp.py",
+        "execution-plane/gauntlet_adapters/__init__.py",
+        "execution-plane/tests/test_mcp_adapter.py",
+        "execution-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T049",

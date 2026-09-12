@@ -245,6 +245,60 @@ scenario library's executor simulates: fault files written into the
 workspace from outside the worker, receipts deterministic over the
 fault's identity, teardown removing exactly what apply added.
 
+## The MCP adapter
+
+`gauntlet_adapters.mcp` is the Model Context Protocol adapter (T048,
+spec 18.3, source S18, AC-032). The specification's one protocol-level
+rule: an MCP integration "must preserve audience-bound authorization
+rather than pass downstream tokens through indiscriminately." The
+adapter sits at the `network_edge` between the worker's MCP client and
+an MCP server, and enforces that rule on every tool call:
+
+- **Audience binding.** Every call presents a worker credential whose
+  `aud` claim must equal the target server's identity. A missing,
+  malformed, wrong-audience, or audience-less credential refuses with
+  an `AdapterRefusal` before anything dispatches — the server's call
+  count does not move.
+- **No passthrough.** The worker credential is consumed at the adapter
+  boundary. The server authenticates the adapter's own audience-bound
+  credential, so a token minted for the worker's purpose never travels
+  downstream.
+- **Redaction.** Server records, the adapter's dispatch log, and
+  receipts carry keyed fingerprints (`hk_` HMAC pseudonyms, spec 19),
+  never raw credential material.
+
+The fault capability is `tool_result`. `apply` writes the client fault
+config into the workspace (`.gauntlet/mcp-fault.json`) and arms an
+in-flight mutation for one tool — `corrupt_payload` garbles the result
+payload, `swap_error` replaces the result with an error. Other tools
+pass through untouched, and `teardown` removes the config and disarms.
+
+```python
+from gauntlet_adapters import (
+    MCPServer, MCPToolAdapter, default_tools, issue_credential,
+    run_mcp_conformance,
+)
+
+adapter = MCPToolAdapter(MCPServer("srv_repos0000001", default_tools()))
+token = issue_credential("srv_repos0000001", "worker:wlv001")
+result = adapter.call_tool(workspace, "fetch_document",
+                           {"path": "task.md"}, token)
+```
+
+`run_mcp_conformance(adapter)` returns the canonical nine-check report
+plus four MCP-specific checks — `mcp-audience-binding`,
+`mcp-no-passthrough`, `mcp-record-redaction`, `mcp-fault-in-flight` —
+because AC-032 demands auth conformance and the canonical suite does
+not test it. Each extra check is proven able to reject: an adapter
+that launders wrong-audience tokens, forwards the worker token, logs
+raw credentials, or never applies its fault fails exactly its own
+check.
+
+Honest scope: the server is a simulated in-process MCP server and the
+credentials are an unsigned fixture encoding. The audience check is
+the point, not the cryptography; a real deployment signs both tokens
+and speaks the real transport, and the checks stay the same.
+
 ## Tests
 
 ```bash
