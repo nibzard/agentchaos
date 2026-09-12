@@ -856,7 +856,7 @@
       "id": "T032",
       "title": "Build the experiment builder UI",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Let operators select a workload, scenario pack, baseline and treatment profiles, selectors, budgets, and schedule after compiled-plan preview.",
       "depends_on": [
         "T003",
@@ -866,7 +866,16 @@
       "tags": [
         "ui",
         "experiments"
-      ]
+      ],
+      "files": [
+        "ui/src/builder.ts",
+        "ui/src/builder.test.ts",
+        "ui/src/builder-page.ts",
+        "ui/builder.html",
+        "ui/package.json",
+        "ui/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T033",

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gauntlet — experiment builder</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; }
+    .blockers { border-left: 4px solid #b00020; padding-left: .75rem; }
+    .blockers.none { border-left-color: #2e7d32; }
+    .no-override { color: #555; }
+    .preview.pending, .schedule.blocked { color: #777; }
+    .preview.ready, .schedule.ready { color: #2e7d32; }
+    code { background: #f4f4f4; padding: 0 .2rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <!-- The control plane renders the catalog and the operator's
+       current builder state into these islands. The values below are
+       synthetic examples. -->
+  <script type="application/json" id="builder-catalog">
+{
+  "kind": "BuilderCatalog",
+  "api_version": "v1",
+  "workloads": [
+    {
+      "workload_version_id": "wlv_repomaintenance01",
+      "modes": ["isolated_reexecution", "observe"],
+      "enrolled_targets": ["tgt_repcheckout000001", "tgt_reposandbox0002"]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_version_id": "scn_impossibletask01",
+      "modes": ["isolated_reexecution", "observe"]
+    }
+  ],
+  "profiles": [
+    { "profile_id": "aup_baselinehard0001",
+      "description": "hard controls only" },
+    { "profile_id": "aup_fullreview0001",
+      "description": "full-call review" }
+  ]
+}
+  </script>
+  <script type="application/json" id="builder-state">
+{
+  "workloadVersionId": null,
+  "scenarioVersionIds": [],
+  "baselineProfileId": null,
+  "treatmentProfileId": null,
+  "mode": "isolated_reexecution",
+  "targetIds": [],
+  "planDigest": null
+}
+  </script>
+  <main id="app" aria-live="polite">
+    <p>loading…</p>
+  </main>
+  <script type="module" src="dist/builder.js"></script>
+</body>
+</html>

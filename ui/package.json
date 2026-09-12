@@ -6,6 +6,6 @@
   "description": "Gauntlet operator UI (ADR-0001): TypeScript, no runtime dependencies, read-oriented.",
   "scripts": {
     "test": "bun test",
-    "build": "bun build src/main.ts --outfile dist/main.js --target browser"
+    "build": "bun build src/main.ts src/builder-page.ts --outdir dist --target browser"
   }
 }
