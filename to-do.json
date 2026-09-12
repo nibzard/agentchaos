@@ -1417,7 +1417,7 @@
       "id": "T053",
       "title": "Implement advanced sampling and statistics",
       "priority": 5,
-      "status": "todo",
+      "status": "done",
       "details": "Add validated handling for clustered outcomes, adaptive sampling, sequential tests, weighted samples, and multiple comparisons.",
       "depends_on": [
         "T022",
@@ -1426,7 +1426,13 @@
       "tags": [
         "p1",
         "statistics"
-      ]
+      ],
+      "files": [
+        "control-plane/sampling.go",
+        "control-plane/sampling_test.go",
+        "control-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T054",

@@ -296,6 +296,46 @@ record, err := authority.Promote(control.PromotionRequest{
 profile, _ := authority.Active(tenant)
 ```
 
+## Advanced sampling and statistics
+
+`sampling.go` (T053, spec 14.4 and 15.1, AC-034) extends the
+fixed-cohort refusal discipline of `assurance.go` to the P1 cases.
+Every component reports its unit, keeps exact arithmetic where exact
+arithmetic is honest, and refuses the rest:
+
+- **Clustered outcomes.** `AnalyzeClusters` counts clusters, not the
+  observations inside them: a cluster fails when any observation in
+  it failed. The cluster-level exact bound is the claim; the
+  observation-level bound appears for contrast and is labeled with
+  whether a session-level claim is justified — only when every
+  cluster is a singleton. The sensitivity bound treats every
+  unresolved cluster as failed.
+- **Sequential tests.** `SequentialBoundary` preregisters the look
+  schedule. Each look is an exact one-sided binomial test at
+  `alpha/K`; the union bound over the schedule keeps the overall
+  error at or under alpha. Evaluation at an unregistered cohort size
+  or a look past the schedule is refused — recomputing a fixed
+  interval until it passes is not a sequential test. The final look
+  without release reads inconclusive, never as a pass.
+- **Weighted samples.** `AnalyzeStrata` reports each stratum
+  separately with its own exact bound over its selected units, plus
+  Horvitz-Thompson point estimates labeled as point estimates: no
+  validated interval estimator ships in this version. Weighted counts
+  never feed the exact binomial formula; only a full census pools.
+- **Multiple comparisons.** `AdjustForMultipleComparisons` applies
+  Bonferroni or Holm step-down over a declared comparison family,
+  with adjusted p-values and rejections. The family is what was
+  declared; comparisons added after seeing results are a new family.
+- **Adaptive sampling.** `AuditSamplingPlan.Validate` enforces the
+  allocation rule: exactly one nonzero uniform sentinel stratum, and
+  risk-triggered strata bound to a declared deterministic rule —
+  risk-routed review is additional to the random sample, never a
+  substitute. `KeyedInclusion` draws units by keyed HMAC so an
+  auditor reproduces every inclusion decision; the key never reaches
+  the worker. `PopulationRateFromUniform` draws population rates from
+  the uniform stratum alone, because triggered rates are conditional
+  on their triggers, not population estimates.
+
 ## Tests
 
 ```bash
