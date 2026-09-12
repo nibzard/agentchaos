@@ -1395,7 +1395,7 @@
       "id": "T052",
       "title": "Implement automated profile promotion",
       "priority": 4,
-      "status": "todo",
+      "status": "done",
       "details": "Promote only preapproved profiles after development, held-out, and shadow gates pass. Prevent silent weakening of root policy.",
       "depends_on": [
         "T021",
@@ -1405,7 +1405,13 @@
       "tags": [
         "p1",
         "profiles"
-      ]
+      ],
+      "files": [
+        "control-plane/promotion.go",
+        "control-plane/promotion_test.go",
+        "control-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T053",

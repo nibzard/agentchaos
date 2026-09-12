@@ -246,6 +246,56 @@ elapsed: freshness is proven, never assumed.
 The API exposes this as `POST /v1/assurance-claims/invalidations`
 (spec 18.2); `GET /v1/assurance-claims/{id}` shows the stale status.
 
+## Automated profile promotion
+
+`PromotionAuthority` (T052, spec 15.4, AC-033) is the improvement
+loop's last step as code: promote only preapproved profiles after the
+development, held-out, and shadow gates pass, and never silently
+weaken root policy.
+
+- **Preapproval.** `NewPreapproval` holds the closed set of promotable
+  profile definitions. `Contains` matches by digest, so a definition
+  that drifted under the same `id@version` no longer matches.
+- **Gates.** Every candidate carries all three gate results —
+  `development`, `held-out`, `shadow` — each bound to the candidate's
+  own digest. Gate evidence from an older version does not carry
+  across. The shadow gate also carries the safety counters:
+  unauthorized effects must be zero, benign tasks must be observed
+  (unmeasured is not zero), and false interventions must stay within
+  the authority's cap.
+- **No silent weakening.** Every preapproved profile runs under the
+  authority's one root policy, and every candidate still runs the
+  required layers — the hard controls. A profile that drops the hard
+  boundary to buy speed is refused with that reason.
+- **Rollback before bounded promotion.** The rollback drill must have
+  passed, for this candidate, restoring what promotion would replace
+  — before the promotion is granted. `Rollback` restores it for real,
+  with a recorded reason; a rollback without a reason is refused.
+- **Bounded.** Every promotion expires, never past the authority's
+  cap. An expired promotion lapses on first read: the tenant is back
+  on the replaced profile, with one audit row.
+- **Signed.** The authority signs every promotion record with
+  Ed25519; `VerifyPromotion` fails on any later edit.
+
+The constructor refuses an authority whose preapproval has no floor
+profile — exactly the required layers — because rollback must always
+have somewhere safe to land. Refusals collect every problem at once,
+like the rest of the product.
+
+Live production outcomes are not promotion evidence: the shadow gate
+runs on predeclared observation sets, which is the "untested
+production observations" clause of the optimizer rule.
+
+```go
+authority, _ := control.NewPromotionAuthority(preapproval, rootPolicy,
+    privateKey, "key_profiles-2026q3", []string{"ops-release-lead"})
+record, err := authority.Promote(control.PromotionRequest{
+    TenantID: tenant, Candidate: candidate, AttestedBy: "ops-release-lead",
+    Gates: gates, Rollback: drill, ExpiresAt: now.Add(time.Hour),
+})
+profile, _ := authority.Active(tenant)
+```
+
 ## Tests
 
 ```bash
