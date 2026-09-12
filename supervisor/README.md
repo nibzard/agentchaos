@@ -32,6 +32,33 @@ missing, or when the log is empty. Every report carries the
 unconditional limitation: processing a session log is not proof that
 every behavior was understood.
 
+## Sentinel audit sampling
+
+`SentinelSampler` (T024, spec 15.1) assigns deep evidence review to a
+nonzero uniform random sample of clean traffic — units every detector
+called clean. The draw is `HMAC-SHA256(randomization key, epoch,
+unit)` below `rate * 2^64`:
+
+- Deterministic given key, epoch, and unit: batching, arrival order,
+  and call count cannot change who is reviewed, and an auditor
+  reproduces every decision after the fact.
+- The key stays server-side. Records carry only its key id
+  (`smkey_...`), so a worker cannot compute a way into or out of the
+  sample.
+- Every unit gets one `Selection` record — included or not — with its
+  inclusion probability, method (`sentinel`, `risk_routed`, `none`),
+  key id, and epoch. Exclusion is a recorded outcome.
+- Risk-routed units are always reviewed but never enter the uniform
+  draw: triggered review is additional, never a substitute. A batch
+  that draws zero sentinels says so in its summary.
+- `SampleByCluster` switches the sampling unit to the task group or
+  deployment cluster when dependence makes per-unit draws the wrong
+  design: a drawn cluster is reviewed whole.
+
+The 1% default rate is a design hypothesis (spec 15.1), and
+construction refuses a zero rate — a sampler that can select nothing
+is not a sentinel program.
+
 ## Layer 2: the fast detector
 
 `FastDetector.Detect` scans the most recent events of one run — the

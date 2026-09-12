@@ -663,7 +663,7 @@
       "id": "T024",
       "title": "Implement random sentinel audit sampling",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Run a nonzero uniform random deep-review sample on clean traffic and log inclusion probability and randomization keys outside worker access.",
       "depends_on": [
         "T019"
@@ -671,7 +671,13 @@
       "tags": [
         "sampling",
         "audit"
-      ]
+      ],
+      "files": [
+        "supervisor/sentinel.go",
+        "supervisor/sentinel_test.go",
+        "supervisor/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T025",
