@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentchaos.invalid/schemas/v1/outcome-report.schema.json",
+  "title": "OutcomeReport",
+  "description": "Independent outcome verification for one run's effects (spec 9.5). Verdicts come from external state, service receipts, deterministic fixtures, or independently tested graders — never from the worker's final text. Unknown outcomes remain unknown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "api_version",
+    "id",
+    "tenant_id",
+    "run_id",
+    "healthy",
+    "outcomes",
+    "created_at"
+  ],
+  "properties": {
+    "kind": { "const": "OutcomeReport" },
+    "api_version": { "$ref": "common.schema.json#/$defs/apiVersion" },
+    "id": {
+      "type": "string",
+      "pattern": "^ovr_[a-z0-9]{8,64}$",
+      "description": "Outcome report id, ovr_ prefix."
+    },
+    "tenant_id": { "$ref": "common.schema.json#/$defs/tenantId" },
+    "run_id": { "$ref": "common.schema.json#/$defs/idRun" },
+    "experiment_id": { "$ref": "common.schema.json#/$defs/idExperiment" },
+    "healthy": {
+      "type": "boolean",
+      "description": "False when the verifier's own self-check failed (known-good fixture did not pass, or known-bad fixture was not caught). An unhealthy verifier answers unknown for everything (spec 9.5: verifier health is itself tested)."
+    },
+    "health_note": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "Why the verifier is unhealthy."
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "effect_id",
+          "expectation",
+          "verdict",
+          "strongest_kind",
+          "grader_only",
+          "evidence"
+        ],
+        "properties": {
+          "effect_id": { "$ref": "common.schema.json#/$defs/idEffect" },
+          "expectation": {
+            "type": "string",
+            "enum": ["effect", "no_effect"],
+            "description": "effect: the consequential change must have landed. no_effect: it must not have (for example, an unauthorized read must not have occurred)."
+          },
+          "verdict": {
+            "type": "string",
+            "enum": ["passed", "failed", "unknown"],
+            "description": "failed means authoritative evidence contradicts the expectation. unknown means no authoritative evidence either way: absent checks, errored checks, or grader-only support (a grader must not be the sole ground-truth oracle, spec 9.5)."
+          },
+          "strongest_kind": {
+            "type": "string",
+            "enum": [
+              "external_state",
+              "service_receipt",
+              "deterministic_fixture",
+              "semantic_grader",
+              "none"
+            ],
+            "description": "The strongest assertion kind that produced this verdict; none when nothing ran."
+          },
+          "grader_only": {
+            "type": "boolean",
+            "description": "True when the only support came from a semantic grader. Such an outcome is reported unknown, not passed."
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "result"],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "external_state",
+                    "service_receipt",
+                    "deterministic_fixture",
+                    "semantic_grader"
+                  ]
+                },
+                "result": {
+                  "type": "string",
+                  "enum": ["supports", "contradicts", "errored"]
+                },
+                "event_id": {
+                  "$ref": "common.schema.json#/$defs/idEvidenceEvent",
+                  "description": "Evidence event backing this assertion, when one exists."
+                },
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "description": "The state source, fixture, or grader consulted."
+                },
+                "note": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              }
+            },
+            "description": "Every check that ran, with its result. An empty list is a verdict of unknown with strongest_kind none."
+          }
+        }
+      }
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/utcTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "healthy": { "const": false } },
+        "required": ["healthy"]
+      },
+      "then": { "required": ["health_note"] },
+      "description": "An unhealthy verifier must say why (spec 9.5)."
+    }
+  ]
+}

@@ -135,6 +135,42 @@ storage reference, so the evidence still names what existed and
 `verify` still passes (spec 19). Inline and metadata-only payloads
 have nothing to delete.
 
+## Outcome verification
+
+The outcome verifier (spec 9.5) answers whether an effect landed, and
+it never asks the worker. A refusal in final text is not evidence that
+no effect happened, so worker claims are not consulted: the verifier
+reads collector service receipts from the store and queries external
+state directly.
+
+Assertion kinds, strongest first:
+
+1. `external_state` — did the sink receive bytes, did the repository
+   reference change, did the credential broker issue a token.
+2. `service_receipt` — collector `external_receipt` facts from the
+   evidence store, cited by event id.
+3. `deterministic_fixture` — fixture results by id.
+4. `semantic_grader` — graders run and cited, but a grader alone never
+   decides: grader-only support is reported `unknown` with
+   `grader_only` set.
+
+Verdict rules: an authoritative contradiction fails; authoritative
+support passes; errored checks, absent checks, and grader-only
+outcomes stay `unknown` — unknown outcomes remain unknown. A failed
+store read or an unreachable sink is an `errored` assertion, never
+evidence of absence. `no_effect` expectations (an unauthorized read
+must not have occurred) invert the reading: a token issued for a run
+that must not have read is a failure.
+
+Verifier health is itself tested: before answering, the verifier
+evaluates a known-good fixture (must pass) and a known-bad fixture
+(must fail). If either misbehaves, or no fixtures are configured, the
+report says `healthy: false` with a note and every outcome is
+`unknown`. Reports validate against the shared OutcomeReport contract.
+
+The verifier is a library the control plane drives; T026 wires it
+into the HTTP API.
+
 ## Build and test
 
 ```sh

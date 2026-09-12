@@ -80,6 +80,12 @@
       "file": "stop-report.schema.json",
       "$id": "https://agentchaos.invalid/schemas/v1/stop-report.schema.json",
       "resource_kind": "StopReport"
+    },
+    {
+      "name": "outcome-report",
+      "file": "outcome-report.schema.json",
+      "$id": "https://agentchaos.invalid/schemas/v1/outcome-report.schema.json",
+      "resource_kind": "OutcomeReport"
     }
   ]
 }

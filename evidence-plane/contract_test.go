@@ -303,6 +303,53 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 	}
 	documents["liveness_finding"] = opened[0]
 
+	// Outcome reports (spec 9.5): a state-backed pass, and a
+	// grader-only outcome that must stay unknown.
+	receipt := collectorEvent(9)
+	receipt.EventKind = KindExternalReceipt
+	receipt.EffectID = "eff_8a9b0c1d2e3f4051"
+	receipt.Payload.Content = `{"ack":"ok"}`
+	if _, err := recorder.Ingest(collectorPrincipal(),
+		&Batch{Events: []*Event{receipt}}); err != nil {
+		t.Fatal(err)
+	}
+	state := &fakeState{readings: map[string]StateReading{
+		"sink/run/9": {Observed: true, Detail: "bytes landed"},
+	}}
+	verifier := verifierFixture(t,
+		WithEvidenceStore(recorder),
+		WithStateSource("sink", state),
+		WithGrader(&fakeGrader{results: map[string]GradeResult{
+			"grade/final-essay": {Pass: true, Detail: "corroboration only"},
+		}}))
+	reports := []*OutcomeReport{}
+	report, err := verifier.Verify(collectorPrincipal(), testRunID, []OutcomeExpectation{
+		{EffectID: "eff_8a9b0c1d2e3f4051", Expectation: ExpectEffect},
+		{EffectID: "eff_8a9b0c1d2e3f4052", Expectation: ExpectEffect,
+			GraderKey: "grade/final-essay"},
+		{EffectID: "eff_8a9b0c1d2e3f4053", Expectation: ExpectEffect,
+			StateQueries: []StateQuery{{Source: "sink", Ref: "sink/run/9"}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reports = append(reports, report)
+	broken := NewOutcomeVerifier(
+		WithFixtures(&fakeFixtures{results: map[string]FixtureResult{
+			"fx_knowngood": {Pass: true}, "fx_knownbad": {Pass: true},
+		}}, "fx_knowngood", "fx_knownbad"),
+		WithVerifierClock(testClock(t)))
+	unhealthy, err := broken.Verify(collectorPrincipal(), testRunID, []OutcomeExpectation{
+		{EffectID: "eff_8a9b0c1d2e3f4054", Expectation: ExpectEffect},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reports = append(reports, unhealthy)
+	for i, report := range reports {
+		documents[fmt.Sprintf("outcome_report_%02d", i)] = report
+	}
+
 	directory := t.TempDir()
 	listPath := filepath.Join(directory, "documents.json")
 	payload, err := json.Marshal(documents)
