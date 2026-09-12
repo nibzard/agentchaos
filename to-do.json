@@ -881,7 +881,7 @@
       "id": "T033",
       "title": "Build the run timeline UI",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Display agent, tool, broker, injection, monitor, and infrastructure events on separate trust-labeled lanes with links to raw evidence and receipts.",
       "depends_on": [
         "T011",
@@ -891,7 +891,16 @@
       "tags": [
         "ui",
         "evidence"
-      ]
+      ],
+      "files": [
+        "ui/src/timeline.ts",
+        "ui/src/timeline.test.ts",
+        "ui/src/timeline-page.ts",
+        "ui/timeline.html",
+        "ui/package.json",
+        "ui/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T034",

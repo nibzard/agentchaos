@@ -13,10 +13,15 @@ ui/src/overview.test.ts  overview suite
 ui/src/builder.ts        experiment builder: catalog parser, selection
                          state, blockers, manifest draft, renderer
 ui/src/builder.test.ts   builder suite
+ui/src/timeline.ts       run timeline: strict parser, lane assignment,
+                         effect pairing, renderer
+ui/src/timeline.test.ts  timeline suite
 ui/src/main.ts           overview page entry: data island -> page
 ui/src/builder-page.ts   builder page entry: islands -> builder panel
+ui/src/timeline-page.ts  timeline page entry: island -> lanes
 ui/index.html            overview shell with a synthetic example island
 ui/builder.html          builder shell with example islands
+ui/timeline.html         timeline shell with a synthetic example island
 ```
 
 ## Data flow
@@ -88,3 +93,26 @@ this advance?*
 Selection updates (`selectWorkload`, `toggleScenario`, `toggleTarget`,
 `setProfiles`, `setMode`, `setBudgets`) return new states; switching
 workloads drops targets chosen for the old one.
+
+## Run timeline
+
+`timeline.ts` (spec 17.3, T033) renders one run's events on six
+trust-labeled lanes: agent, tool, broker, injection, monitor,
+infrastructure.
+
+- `parseTimeline` accepts the timeline document strictly — ids match
+  the `evt_`/`run_`/`src_`/`cid_` patterns, kinds and trust labels
+  come from the contract enums, and unknown fields fail closed at
+  every level (ADR-0002). A finding that names an event the document
+  does not carry is a parse error, not a silent drop.
+- Every event shows its trust label: worker claim, collector fact, or
+  monitor interpretation. Monitor interpretations always take the
+  monitor lane, whatever their kind.
+- `pairEffects` joins each broker decision to its external receipt
+  through a shared correlation id. A decision with no receipt — or a
+  receipt with no decision — renders as a visible missing half.
+- Findings list the event ids they rest on, so a claim can be walked
+  back to raw evidence.
+- Object references render as digests only; the page never fetches
+  the referenced content. Redaction, truncation, limited source
+  coverage, and clock uncertainty are stated, not hidden.

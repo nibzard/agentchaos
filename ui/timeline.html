@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gauntlet — run timeline</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.1rem; text-transform: capitalize; }
+    .lane { border-left: 4px solid #ccc; padding-left: .75rem;
+            margin-bottom: 1.25rem; }
+    .lane[data-lane="broker"] { border-left-color: #b00020; }
+    .lane[data-lane="monitor"] { border-left-color: #6a1b9a; }
+    .ordering, .empty { color: #777; }
+    .trust { display: inline-block; border: 1px solid #999;
+             border-radius: 3px; padding: 0 .3rem; font-size: .8rem; }
+    .event.worker_claim .trust { border-color: #e65100;
+                                 color: #e65100; }
+    .event.collector_fact .trust { border-color: #2e7d32;
+                                   color: #2e7d32; }
+    .event.monitor_interpretation .trust { border-color: #6a1b9a;
+                                           color: #6a1b9a; }
+    .missing { color: #b00020; font-weight: 600; }
+    code { background: #f4f4f4; padding: 0 .2rem; border-radius: 3px;
+           word-break: break-all; }
+    ol.events { padding-left: 1.25rem; }
+    ol.events li { margin-bottom: .35rem; }
+  </style>
+</head>
+<body>
+  <!-- The control plane renders the run's timeline document into this
+       island. The values below are a synthetic example. -->
+  <script type="application/json" id="timeline-data">
+{
+  "kind": "RunTimeline",
+  "api_version": "v1",
+  "run_id": "run_isoreexec0001",
+  "events": [
+    {
+      "id": "evt_agentplan000001",
+      "event_kind": "proposed_action",
+      "trust_label": "worker_claim",
+      "source": { "id": "src_worker-session1", "component": "worker" },
+      "sequence": 4,
+      "observed_at": "2026-09-12T00:00:04Z",
+      "clock_uncertainty_ms": 0,
+      "payload": { "kind": "inline", "content": "plan: read the diff",
+        "redacted": false, "truncated": false },
+      "correlation_ids": []
+    },
+    {
+      "id": "evt_brokerallow00001",
+      "event_kind": "broker_decision",
+      "trust_label": "collector_fact",
+      "source": { "id": "src_broker-main01", "component": "broker" },
+      "sequence": 1,
+      "observed_at": "2026-09-12T00:00:05Z",
+      "clock_uncertainty_ms": 0,
+      "payload": { "kind": "metadata_only", "redacted": false,
+        "truncated": false },
+      "correlation_ids": ["cid_effect0001"]
+    },
+    {
+      "id": "evt_vendorreceipt001",
+      "event_kind": "external_receipt",
+      "trust_label": "collector_fact",
+      "source": { "id": "src_sink-audit0001", "component": "collector" },
+      "sequence": 9,
+      "observed_at": "2026-09-12T00:00:06Z",
+      "clock_uncertainty_ms": 120,
+      "payload": { "kind": "object_ref",
+        "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "redacted": false, "truncated": false },
+      "correlation_ids": ["cid_effect0001"]
+    },
+    {
+      "id": "evt_monitorverdict1",
+      "event_kind": "resource_access",
+      "trust_label": "monitor_interpretation",
+      "source": { "id": "src_monitor-watch1", "component": "monitor",
+        "coverage": false },
+      "sequence": 2,
+      "observed_at": "2026-09-12T00:00:07Z",
+      "clock_uncertainty_ms": 0,
+      "payload": { "kind": "metadata_only", "redacted": false,
+        "truncated": false },
+      "correlation_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "fnd_fenceescape001",
+      "event_ids": ["evt_agentplan000001", "evt_monitorverdict1"],
+      "description": "the plan asked for a write outside the fence"
+    }
+  ]
+}
+  </script>
+  <main id="app" aria-live="polite">
+    <p>loading…</p>
+  </main>
+  <script type="module" src="dist/timeline.js"></script>
+</body>
+</html>
