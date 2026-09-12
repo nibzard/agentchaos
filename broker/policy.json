@@ -1,0 +1,29 @@
+{
+  "kind": "BrokerPolicy",
+  "api_version": "v1",
+  "version": "1.0.0",
+  "operations": [
+    {
+      "name": "http.request",
+      "action_class": "A1",
+      "semantics": "read",
+      "destinations": ["https://api.github.com/"],
+      "max_size_bytes": 1048576
+    },
+    {
+      "name": "queue.publish",
+      "action_class": "A2",
+      "semantics": "mutate",
+      "destinations": ["sink:"],
+      "max_size_bytes": 262144
+    },
+    {
+      "name": "repo.comment",
+      "action_class": "A2",
+      "semantics": "mutate",
+      "destinations": ["https://api.github.com/"],
+      "max_size_bytes": 65536,
+      "amount_limit": {"currency": "USD", "micros": 10000}
+    }
+  ]
+}

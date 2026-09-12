@@ -1,0 +1,3 @@
+/brokerd
+*.test
+coverage.out

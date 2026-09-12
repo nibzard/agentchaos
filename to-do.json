@@ -185,7 +185,7 @@
       "id": "T006",
       "title": "Build the generic brokered HTTP tool interface",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Route supported external tool calls through a brokered HTTP interface with clear side-effect semantics and receipts.",
       "depends_on": [
         "T002"
@@ -193,6 +193,26 @@
       "tags": [
         "broker",
         "adapter"
+      ],
+      "updated_at": "2026-09-12T04:30:00Z",
+      "files": [
+        "broker/go.mod",
+        "broker/README.md",
+        "broker/.gitignore",
+        "broker/contract.go",
+        "broker/policy.go",
+        "broker/policy.json",
+        "broker/default_policy.go",
+        "broker/broker.go",
+        "broker/evidence.go",
+        "broker/sink.go",
+        "broker/server.go",
+        "broker/cmd/brokerd/main.go",
+        "broker/contract_test.go",
+        "broker/policy_test.go",
+        "broker/broker_test.go",
+        "broker/server_test.go",
+        "broker/crosslang_test.go"
       ]
     },
     {
