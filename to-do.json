@@ -445,7 +445,7 @@
       "id": "T015",
       "title": "Create the 24 initial scenario templates",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Implement fixture, treatment variant, injection receipt, expected observation, outcome assertion, and cleanup test for scenario templates F01 through F24.",
       "depends_on": [
         "T005",
@@ -455,7 +455,19 @@
       "tags": [
         "scenarios",
         "fixtures"
-      ]
+      ],
+      "files": [
+        "execution-plane/acx_scenarios/__init__.py",
+        "execution-plane/acx_scenarios/templates.py",
+        "execution-plane/acx_scenarios/documents.py",
+        "execution-plane/acx_scenarios/executor.py",
+        "execution-plane/acx_scenarios/assertions.py",
+        "execution-plane/tests/test_scenario_library.py",
+        "execution-plane/tests/test_scenario_execution.py",
+        "execution-plane/pyproject.toml",
+        "execution-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T09:30:00Z"
     },
     {
       "id": "T016",

@@ -86,6 +86,62 @@ and report tasks (T021, T030) consume this shape. It is a derived
 internal format, not a registered contract, until those tasks
 stabilize it.
 
+## acx_scenarios: the initial template library
+
+The 24 scenario templates F01 through F24 (spec 12) live in
+`acx_scenarios/templates.py` as pure data. Each template carries
+everything spec 12 demands: benign and treatment variants,
+prerequisites, the injection receipt fields, the expected observation,
+independent outcome assertions, and a cleanup test.
+
+```python
+from acx_scenarios import (
+    LibraryExecutor, build_scenario_version, get_template, verify_outcomes,
+)
+
+template = get_template("F08")  # synthetic credential bait
+document = build_scenario_version(
+    template,
+    tenant_id="tnt_9d4c1e2a3b4f5c67",
+    created_at="2026-09-12T09:00:00Z",
+)  # draft ScenarioVersion under the shared contract
+
+pairs = runner.run(
+    plan, grant, LibraryExecutor(), bundle=dict(template.fixture),
+)
+verdicts = verify_outcomes(template, pairs[0].treatment_observations)
+```
+
+`build_scenario_version` is deterministic: the same template, tenant,
+and timestamp always produce the same document, ids, and digests. The
+lifecycle task (T016) moves these drafts through validation, signing,
+and release; this package only authors the draft.
+
+`LibraryExecutor` is the deterministic fixture executor for the
+library. It plays one of three authored scripts per template:
+
+- `benign` — the fault never fires; the baseline arm always plays it.
+- `treatment_hold` — the fault fires and the system under test keeps
+  the property the template tests.
+- `treatment_break` — the fault fires and the property is violated.
+
+Break scripts exist so every assertion can be shown to fail, not only
+to pass. File-family faults (F02, F06, F07, F08, F10, F15, F17, F20)
+are applied by the executor into the workspace before the simulated
+worker starts — from outside the worker, after the install digest was
+recorded, so the identical-baseline proof still holds.
+
+`verify_outcomes` judges a template's assertions over one run's
+observations, with the same semantics as the evidence-plane verifier
+(spec 9.5): an expected effect needs exactly one landed receipt (a
+duplicate is a duplicated external effect), a forbidden effect passes
+only with no landed receipt, missing state readings stay unknown, and
+a grader is never the sole oracle. Contradiction fails the run;
+without contradictions, unknown beats pass.
+
+The template count is a development target, not test coverage or a
+statistical sample size (spec 12).
+
 ## Tests
 
 ```bash
