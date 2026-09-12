@@ -1,0 +1,132 @@
+{
+  "kind": "OpenCoreManifest",
+  "api_version": "v1",
+  "name": "gauntlet",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "name_note": "Gauntlet is a working name. Naming clearance is pending (docs/architecture/0003-name-and-license.md, spec 23.3).",
+  "components": [
+    {
+      "id": "scenario-specification",
+      "promise": "The scenario specification: templates, documents, assertions, and the lifecycle that turns a template into trigger evidence",
+      "spec_ref": "spec 23.1 scenario specification",
+      "paths": ["execution-plane/acx_scenarios"]
+    },
+    {
+      "id": "schemas",
+      "promise": "The contract schemas for every document on the wire, and the Python validator that enforces them strictly",
+      "spec_ref": "spec 23.1 schemas",
+      "paths": ["shared/schemas", "shared/python"]
+    },
+    {
+      "id": "cli",
+      "promise": "The command line interface with stable exit codes and portable JSON reports",
+      "spec_ref": "spec 23.1 CLI",
+      "paths": ["cli"]
+    },
+    {
+      "id": "local-runner",
+      "promise": "The local fixture runner that executes paired baseline and treatment variants",
+      "spec_ref": "spec 23.1 local runner",
+      "paths": ["execution-plane/acx_runner"]
+    },
+    {
+      "id": "reference-fixture-environments",
+      "promise": "Reference fixture environments with install, digest, and release semantics",
+      "spec_ref": "spec 23.1 reference fixture environments",
+      "paths": ["execution-plane/acx_runner"]
+    },
+    {
+      "id": "synthetic-scenario-pack",
+      "promise": "The synthetic scenario pack: all 24 fault templates with assertions and cleanup",
+      "spec_ref": "spec 23.1 synthetic scenario pack",
+      "paths": ["execution-plane/acx_scenarios"]
+    },
+    {
+      "id": "adapter-interface",
+      "promise": "The fault adapter interface, the reference adapter, and the conformance suite third parties must pass",
+      "spec_ref": "spec 23.1 adapter interface",
+      "paths": ["execution-plane/acx_adapters"]
+    },
+    {
+      "id": "core-evidence-format",
+      "promise": "The append-only evidence chain with source trust labels, and its schemas",
+      "spec_ref": "spec 23.1 core evidence format",
+      "paths": ["evidence-plane", "shared/schemas"]
+    },
+    {
+      "id": "comparison-and-statistics",
+      "promise": "Comparison, cost accounting, and the fixed-cohort assurance statistics with their property tests",
+      "spec_ref": "spec 23.1 comparison/statistics code",
+      "paths": ["analysis", "control-plane"]
+    },
+    {
+      "id": "local-ui",
+      "promise": "The basic local UI with inert evidence rendering",
+      "spec_ref": "spec 23.1 basic local UI",
+      "paths": ["ui"]
+    },
+    {
+      "id": "essential-safety-controls",
+      "promise": "The effect broker with bounded delegation and the evidence fence, the governor with grant expiry and the emergency stop, and the supervising reviewer with degradation",
+      "spec_ref": "spec 23.1 essential safety controls; spec 23.3 local users keep stop controls, honest unknowns, redaction, export, and containment without paying",
+      "paths": ["broker", "governor", "supervisor"]
+    }
+  ],
+  "supporting": [
+    {
+      "paths": ["README.md", "LICENSE", "THIRD_PARTY.md"],
+      "reason": "the license, the dependency review, and the repository orientation"
+    },
+    {
+      "paths": ["docs/architecture"],
+      "reason": "the architecture decision record, including the name and license decision"
+    },
+    {
+      "paths": ["execution-plane/pyproject.toml", "execution-plane/README.md"],
+      "reason": "the execution plane installs as a package with the runner, scenarios, and adapters"
+    }
+  ],
+  "excluded": [
+    {
+      "path": "api",
+      "reason": "the hosted beta HTTP surface; commercial tier per spec 23.2"
+    },
+    {
+      "path": "keycustody",
+      "reason": "platform signing-key infrastructure of the hosted trust base; not part of the promised open-core list (spec 23.1)"
+    },
+    {
+      "path": "integration",
+      "reason": "cross-component QA harness wired to internal module paths"
+    },
+    {
+      "path": "release",
+      "reason": "internal release engineering; not a product component"
+    },
+    {
+      "path": "benchmarks",
+      "reason": "internal benchmark operations; the beta targets are not product code"
+    },
+    {
+      "path": "ui/dist",
+      "reason": "build output; regenerate with bun build inside the packaged tree"
+    },
+    {
+      "path": "ui/node_modules",
+      "reason": "dependency cache; install inside the packaged tree"
+    },
+    {
+      "path": "to-do.json",
+      "reason": "internal planning artifact"
+    },
+    {
+      "path": "to-do.schema.json",
+      "reason": "internal planning artifact"
+    },
+    {
+      "path": "dist",
+      "reason": "packaging output directory"
+    }
+  ]
+}

@@ -1192,7 +1192,7 @@
       "id": "T045",
       "title": "Prepare open-core packaging",
       "priority": 3,
-      "status": "todo",
+      "status": "done",
       "details": "Package the scenario specification, schemas, CLI, local runner, fixture environments, synthetic scenario pack, adapter interface, evidence format, comparison code, statistics code, local UI, and basic safety controls.",
       "depends_on": [
         "T015",
@@ -1204,7 +1204,15 @@
       "tags": [
         "packaging",
         "open-source"
-      ]
+      ],
+      "files": [
+        "packaging/manifest.json",
+        "packaging/manifest.schema.json",
+        "packaging/build_open_core.py",
+        "packaging/test_packaging.py",
+        "packaging/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T046",
