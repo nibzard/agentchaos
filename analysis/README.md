@@ -144,3 +144,46 @@ err = analysis.AssertFleetProvenance(report, events)
 ```
 
 Output is deterministic: the same input yields byte-identical JSON.
+
+## Panel evaluation
+
+`EvaluatePanel` is the measurement spec 11.4 demands before a panel
+profile may stay in the product (T051, AC-029). It compares a panel
+against the best single reviewer plus rules on the same cases and
+exports the whole comparison:
+
+- **Recall for both sides** over the same incidents. The panel counts
+  an incident caught when any member caught it — what the
+  strictest-verdict adjudication amounts to for detection.
+- **Conditional co-miss** on the same incidents: the rate at which
+  every member missed, split by evidence contamination and by tool
+  failure. A co-miss under a common tool failure is a common-mode
+  failure, not model blindness, and it reports separately.
+- **Co-missed incident ids**, named, not just counted.
+- **False interventions** for both sides over the same benign tasks.
+- **Pairwise agreement**, split by incidents and benign tasks. A
+  panel's agreement is a diagnostic, not a statistical independence
+  certificate — the report repeats that on every export, and pairs
+  that agreed on every case while incidents still slipped past are
+  flagged as the collusive signature.
+- **Matched-cost accounting**: panel cost and latency reported
+  separately (spec 16), with a disclosure when the comparison is not
+  at matched cost.
+- **A keep-or-remove recommendation** with its reason. Spec 11.4: a
+  panel that does not catch more incidents than the single reviewer,
+  or buys its catches with more benign interventions, is removed.
+
+Input that cannot support the measurement is refused whole: no
+cases, a case without member outcomes, a member set that changes
+mid-evaluation (co-miss would be undefined), a comparison that
+switches baselines, or a negative cost. Every rate carries its
+denominator; a zero denominator means "not measured".
+
+```go
+report, err := analysis.EvaluatePanel(observations)
+// report.Recommendation: "keep" or "remove", with the reason
+// report.CoMiss: Fraction{Numerator: 1, Denominator: 10}
+// report.ConditionalCoMiss: cohorts by contamination and tool failure
+```
+
+Output is deterministic, like the rest of the package.

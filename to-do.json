@@ -1369,7 +1369,7 @@
       "id": "T051",
       "title": "Implement heterogeneous reviewer panels",
       "priority": 4,
-      "status": "todo",
+      "status": "done",
       "details": "Support independent first-pass reviewers, adjudication after findings are fixed, matched-cost evaluation, and co-miss measurements.",
       "depends_on": [
         "T018",
@@ -1379,7 +1379,17 @@
       "tags": [
         "p1",
         "review"
-      ]
+      ],
+      "files": [
+        "supervisor/panel.go",
+        "supervisor/panel_test.go",
+        "supervisor/README.md",
+        "analysis/panel.go",
+        "analysis/panel_test.go",
+        "analysis/profile.go",
+        "analysis/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T052",

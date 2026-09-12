@@ -24,6 +24,12 @@ const (
 	ProfileContextual   = "contextual-review"
 	ProfileFullCall     = "full-call-review"
 	ProfileSession      = "session-review"
+	// ProfilePanel is the consortium profile (spec 11.4): independent
+	// first-pass reviewers plus adjudication. It is a P1 profile: it
+	// stays out of RequiredProfiles until EvaluatePanel shows it
+	// beating the best single reviewer plus rules at matched cost and
+	// latency (spec 11.4: remove it when it does not improve).
+	ProfilePanel = "panel-review"
 )
 
 // RequiredProfiles is the comparison set. The baseline is always the

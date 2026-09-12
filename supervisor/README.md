@@ -110,6 +110,61 @@ No failure path ever returns `ALLOW`. A fallback that could not cite
 source events becomes a hold instead of an uncheckable decision. The
 wrapper stamps the measured latency on every decision.
 
+## Heterogeneous reviewer panels
+
+`Panel` is the consortium profile (T051, spec 11.4): independent
+first-pass reviewers followed by adjudication. `NewPanel` refuses
+anything that is not a real panel — fewer than two members, a
+duplicated heterogeneity profile (model, family, prompt, view), one
+reviewer implementation balloting twice, or an unknown evidence view.
+
+Independence is structural, not behavioral:
+
+- Each member sees only its own **evidence view** — `all`,
+  `independent` (collector facts and monitor readings only),
+  `worker_claims`, or `proposal_only`. The panel applies the view
+  before the member runs, and the member's task type has no field
+  that could carry another member's findings.
+- The first pass is **fixed** before adjudication: every ballot is
+  hashed into a findings digest, and the digest rides on the decision,
+  so a ballot edited after adjudication is detectable.
+- A member that errors, misses its deadline, or returns no verdict
+  ballots `ABSTAIN`, never `ALLOW`.
+
+The adjudicator runs only after the findings are fixed. It takes the
+strictest escalated verdict — one member's `DENY` holds the effect
+against two `ALLOW`s — and records every dissent in the rationale.
+`ABSTAIN` outranks `ALLOW` because an abstain keeps the hold: the
+panel never converts a member's failure into consent. The decision
+carries policy and event references under the same contract as a
+single reviewer (AC-014); a panel that judged nothing citable holds.
+
+The panel grants no authority. It satisfies the same
+`ContextualReviewer` interface, so it slots into the same broker hold
+as every other reviewer; nothing it does releases an effect on a
+member's say-so. Panel agreement is a diagnostic, not a statistical
+independence certificate, and the decision's limitations say so. The
+matched-cost evaluation that decides whether a panel stays in the
+product lives in the analysis package (`EvaluatePanel`, spec 11.4).
+
+```go
+panel, err := supervisor.NewPanel("act_panel-consort01",
+    supervisor.PanelMember{Reviewer: a, MemberID: "mem-alpha",
+        ModelID: "mdl_alpha-v1", Family: "familyA", PromptVersion: "p1",
+        EvidenceView: supervisor.ViewAll, CostMicros: 100},
+    supervisor.PanelMember{Reviewer: b, MemberID: "mem-beta",
+        ModelID: "mdl_beta-v1", Family: "familyB", PromptVersion: "p2",
+        EvidenceView: supervisor.ViewIndependent, CostMicros: 100},
+)
+review, err := panel.Review(ctx, task)         // a ContextualReviewer
+report, err := panel.ReviewWithReport(ctx, task) // ballots + digest
+```
+
+Honest scope: the members here are deterministic fixtures. The
+deliverable is the structure — heterogeneity checks, evidence views,
+fixed findings, fail-safe adjudication — that real model-backed
+reviewers plug into.
+
 ## Usage
 
 ```go
