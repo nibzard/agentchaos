@@ -1277,7 +1277,7 @@
       "id": "T047",
       "title": "Plan and run design partner pilots",
       "priority": 3,
-      "status": "todo",
+      "status": "done",
       "details": "Run pilots that compare approval-heavy workflows, reproduce update-caused failures, and compare existing tests with system-level monitor and cleanup faults.",
       "depends_on": [
         "T030",
@@ -1286,7 +1286,15 @@
       "tags": [
         "pilots",
         "go-to-market"
-      ]
+      ],
+      "files": [
+        "pilots/run_pilots.py",
+        "pilots/README.md",
+        "pilots/test_pilots.py",
+        "pilots/results/pilot_report.md",
+        "pilots/results/pilot_report.json"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T048",

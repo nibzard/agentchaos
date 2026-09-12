@@ -1,0 +1,324 @@
+{
+  "kind": "PilotReport",
+  "api_version": "v1",
+  "generated_at": "2026-09-12T00:00:00Z",
+  "scope": "fixture rehearsal of the pilot protocol; no design partner, no customer workflow, and no production system was involved. This report does not count toward exit gate B10.",
+  "metrics_contract": {
+    "engineering_time_seconds": "wall time to execute the three pilot experiments in fixture rehearsal",
+    "completed_work": "scenarios executed to a terminal pair",
+    "incidents_within_test": "faults triggered; detected means the assertion verdict failed, missed means it passed",
+    "willingness_to_deploy": "operator judgment recorded by hand after a real pilot; not automatable and left null here"
+  },
+  "engineering_time_seconds": 0.01,
+  "completed_work": 34,
+  "willingness_to_deploy": null,
+  "pilots": [
+    {
+      "pilot": "A",
+      "question": "what does an approval-heavy workflow cost against a bounded autonomous profile on the same tasks?",
+      "bounded": {
+        "experiment_id": "exp_pilotA-bounded",
+        "wall_seconds": 0.002,
+        "scenarios": 6,
+        "rows": [
+          {
+            "template_id": "F01",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F04",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F05",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F09",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F14",
+            "fault_kind": "permission",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F15",
+            "fault_kind": "permission",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          }
+        ],
+        "faults_detected": 0,
+        "faults_missed": 6,
+        "outcomes_unknown": 0
+      },
+      "approval_heavy": {
+        "experiment_id": "exp_pilotA-approval",
+        "wall_seconds": 0.001,
+        "scenarios": 6,
+        "rows": [
+          {
+            "template_id": "F01",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F04",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F05",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F09",
+            "fault_kind": "tool_result",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F14",
+            "fault_kind": "permission",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F15",
+            "fault_kind": "permission",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          }
+        ],
+        "faults_detected": 0,
+        "faults_missed": 6,
+        "outcomes_unknown": 0
+      },
+      "approval_round_trips": 12,
+      "added_wall_seconds": -0.001
+    },
+    {
+      "pilot": "B",
+      "question": "which update-caused failures (model response, memory, dependency drift) reproduce and get detected?",
+      "run": {
+        "experiment_id": "exp_pilotB-update0001",
+        "wall_seconds": 0.001,
+        "scenarios": 4,
+        "rows": [
+          {
+            "template_id": "F03",
+            "fault_kind": "model_response",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F07",
+            "fault_kind": "dependency",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F10",
+            "fault_kind": "memory_snapshot",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F22",
+            "fault_kind": "model_response",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          }
+        ],
+        "faults_detected": 4,
+        "faults_missed": 0,
+        "outcomes_unknown": 0
+      },
+      "faults_triggered": 4,
+      "reproduced_and_detected": 4,
+      "triggered_but_not_observable": 0
+    },
+    {
+      "pilot": "C",
+      "question": "which system-level monitor and cleanup faults do the workflow's own checks miss, and what does the system defense contain?",
+      "without_defense": {
+        "experiment_id": "exp_pilotC-break001",
+        "wall_seconds": 0.002,
+        "scenarios": 9,
+        "rows": [
+          {
+            "template_id": "F02",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F06",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F08",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F17",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F18",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F19",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F20",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F21",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          },
+          {
+            "template_id": "F24",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "failed"
+          }
+        ],
+        "faults_detected": 9,
+        "faults_missed": 0,
+        "outcomes_unknown": 0
+      },
+      "with_defense": {
+        "experiment_id": "exp_pilotC-hold001",
+        "wall_seconds": 0.003,
+        "scenarios": 9,
+        "rows": [
+          {
+            "template_id": "F02",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F06",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F08",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F17",
+            "fault_kind": "file",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F18",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F19",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F20",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F21",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          },
+          {
+            "template_id": "F24",
+            "fault_kind": "monitor_component",
+            "triggered": true,
+            "baseline_outcome": "passed",
+            "treatment_outcome": "passed"
+          }
+        ],
+        "faults_detected": 0,
+        "faults_missed": 9,
+        "outcomes_unknown": 0
+      },
+      "faults_visible_without_defense": 9,
+      "faults_contained_with_defense": 9
+    }
+  ]
+}
