@@ -473,15 +473,24 @@
       "id": "T016",
       "title": "Implement scenario lifecycle and signing",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Support draft, isolated validation, signed release, compatibility tests, and mode eligibility for scenario versions.",
       "depends_on": [
         "T015"
       ],
+      "files": [
+        "execution-plane/acx_scenarios/lifecycle.py",
+        "execution-plane/acx_scenarios/executor.py",
+        "execution-plane/acx_scenarios/__init__.py",
+        "execution-plane/tests/test_lifecycle.py",
+        "execution-plane/README.md",
+        "execution-plane/pyproject.toml"
+      ],
       "tags": [
         "scenarios",
         "supply-chain"
-      ]
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T017",

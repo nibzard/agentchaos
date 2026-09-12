@@ -1,8 +1,9 @@
 [project]
 name = "acx-runner"
 version = "0.1.0"
-description = "Local fixture runner for AgentChaos experiments"
+description = "Local fixture runner and scenario library for Gauntlet experiments"
 requires-python = ">=3.11"
+dependencies = ["cryptography>=42"]
 
 [project.optional-dependencies]
 dev = ["pytest"]

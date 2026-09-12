@@ -16,6 +16,7 @@ evidence stream and the injection receipt.
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 from acx_runner.runner import VariantOutcome, VariantSpec
 from acx_scenarios.templates import Template, get_template
@@ -40,6 +41,9 @@ class LibraryExecutor:
             raise ValueError(f"defense must be {HOLD!r} or {BREAK!r}")
         self.defense = defense
         self.applied_faults: list[tuple[str, str]] = []
+        # Workspace plus relative path for every injected fault file,
+        # so the lifecycle's cleanup verifier can find them again.
+        self.fault_targets: list[tuple[Path, str]] = []
         self.executed: list[tuple[str, str]] = []
 
     def execute(self, spec: VariantSpec) -> VariantOutcome:
@@ -59,6 +63,7 @@ class LibraryExecutor:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(content, encoding="utf-8")
                 self.applied_faults.append((spec.scenario["id"], relative))
+                self.fault_targets.append((spec.workspace, relative))
 
         observations: list[dict] = []
         for step in script.steps:

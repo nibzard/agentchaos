@@ -113,9 +113,62 @@ verdicts = verify_outcomes(template, pairs[0].treatment_observations)
 ```
 
 `build_scenario_version` is deterministic: the same template, tenant,
-and timestamp always produce the same document, ids, and digests. The
-lifecycle task (T016) moves these drafts through validation, signing,
-and release; this package only authors the draft.
+and timestamp always produce the same document, ids, and digests.
+
+## Scenario lifecycle
+
+`acx_scenarios.lifecycle` moves a draft ScenarioVersion through the
+four states of spec 12.1 (T016). Every transition has one gate and
+fails closed — a refused transition changes nothing:
+
+1. **Draft.** `build_scenario_version` authors the document. Nothing
+   has run.
+2. **Validated.** `validate_isolated` runs one paired execution through
+   the real runner under a grant that pins the validation plan's
+   digest. Promotion requires: identical installed baselines (AC-003),
+   the injection triggering in the treatment arm only, every outcome
+   assertion passing in both arms, and a cleanup that removes what the
+   fault injected — verified independently, never by worker exit (spec
+   13.3). The scenario document must still be the library document for
+   its template: the id and the fault parameter digest are checked
+   against the template before anything runs.
+3. **Signed.** `sign_release` signs the canonical bytes of the document
+   with an Ed25519 key. Any later edit — content or classification —
+   breaks `verify_release`.
+4. **Released.** `release` records compatibility tests as
+   `mode_eligibility` entries, then re-signs the whole document so the
+   signature covers the classification.
+
+```python
+from acx_scenarios import (
+    Ed25519ReleaseSigner, ReleaseRegistry, classification_status,
+    release, sign_release, validate_isolated, verify_release,
+)
+
+signer = Ed25519ReleaseSigner.generate("key_scenarios-2026q3")
+registry = ReleaseRegistry()  # freezes (id, version) to content
+
+evidence = validate_isolated(document, runner=runner, grant=grant)
+sign_release(document, signer, registry=registry)
+release(document, signer, classifications=[
+    {"mode": "isolated_reexecution", "target_class": "synthetic-repo",
+     "primitive_version": "1.0.0", "eligible": True},
+], registry=registry)
+assert verify_release(document, signer.public_key())
+entry, status = classification_status(
+    document, mode="isolated_reexecution",
+    target_class="synthetic-repo", primitive_version="1.1.0",
+)  # ("stale"): a primitive update invalidates until tests pass again
+```
+
+Immutability: the registry freezes `(id, version)` to a content digest
+at first signing. Different content under the same identity is
+refused — publish a new version. The same release authority that
+signed must record the compatibility tests.
+
+The compiler only schedules `released` scenarios and checks their
+eligibility for the experiment's mode and target classes, so a
+scenario that skipped any gate cannot reach an experiment.
 
 `LibraryExecutor` is the deterministic fixture executor for the
 library. It plays one of three authored scripts per template:
@@ -141,6 +194,9 @@ without contradictions, unknown beats pass.
 
 The template count is a development target, not test coverage or a
 statistical sample size (spec 12).
+
+The executor records every injected fault file (`fault_targets`), which
+is what the lifecycle's cleanup verifier walks after the pair.
 
 ## Tests
 
