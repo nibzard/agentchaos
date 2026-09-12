@@ -140,9 +140,43 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 	}
 	documents["effect_reconciled"] = reconciled
 
+	// Delegation documents: a tree root, a nested child, and a
+	// revoked node with its fence timestamp (spec 10).
+	delegations := testBroker(t, &SyntheticSink{})
+	treeRoot, err := delegations.Delegate(servicePrincipal(), rootRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["delegation_root"] = treeRoot
+	nested, err := delegations.Delegate(servicePrincipal(), childRequest(treeRoot))
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["delegation_nested"] = nested
+	revoked, err := delegations.RevokeDelegation(servicePrincipal(), treeRoot.ID, "stop condition met")
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["delegation_revoked"] = revoked
+
+	// A delegation narrowed to nothing: the capability arrays are
+	// empty, never null — null is not an array.
+	denyAll := rootRequest()
+	denyAll.ID = "dlg_denyall000001"
+	denyAll.Capabilities.AllowedDestinations = []string{}
+	denyAll.Capabilities.AllowedResources = nil
+	empty, err := delegations.Delegate(servicePrincipal(), denyAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["delegation_empty_caps"] = empty
+
 	// Every evidence event the broker can emit in these flows.
 	for i, event := range main.Events() {
 		documents[fmt.Sprintf("event_%02d", i)] = event
+	}
+	for i, event := range delegations.Events() {
+		documents[fmt.Sprintf("event_delegation_%02d", i)] = event
 	}
 	for i, event := range timeout.Events() {
 		documents[fmt.Sprintf("event_timeout_%02d", i)] = event

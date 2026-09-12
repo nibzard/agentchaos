@@ -129,6 +129,7 @@ type Broker struct {
 
 	mu          sync.Mutex
 	effects     map[string]*Effect        // by tenant-scoped key
+	delegations map[string]*Delegation    // by tenant-scoped key
 	events      []EvidenceEvent           // append-only journal
 	idempotency map[string]idempotentCall // by tenant-scoped key
 	sequences   map[string]int64          // per source
@@ -170,6 +171,7 @@ func New(policy *Policy, runs []*RunContext, sinks []Sink) *Broker {
 		sinks:       sinks,
 		now:         time.Now,
 		effects:     make(map[string]*Effect),
+		delegations: make(map[string]*Delegation),
 		idempotency: make(map[string]idempotentCall),
 		sequences:   make(map[string]int64),
 		dispatchers: make(map[string]*sync.Mutex),
@@ -336,6 +338,18 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 		}
 	}
 
+	// A delegated effect narrows further under its delegation: the
+	// child identity binds, capabilities subset, and the shared
+	// cumulative budget holds tree-wide (spec 10, AC-008).
+	if verdict.Allowed && proposal.DelegationID != "" {
+		if reason := b.delegationReason(principal.TenantID, proposal, verdict.Rule); reason != "" {
+			verdict = GateVerdict{
+				Reason:     reason,
+				PolicyRefs: []string{b.policy.ref("delegations." + proposal.DelegationID)},
+			}
+		}
+	}
+
 	decision := &BrokerDecision{
 		Verdict:         "deny",
 		PolicyRefs:      verdict.PolicyRefs,
@@ -453,6 +467,27 @@ func (b *Broker) dispatchLocked(effect *Effect, now, idemKey string) (*Effect, e
 		// an inconsistent record never dispatches (spec 10 binding).
 		return nil, &TransitionError{EffectID: effect.ID, From: effect.State,
 			Why: "permit task binding does not match the run"}
+	}
+
+	// A revoked delegation fences its whole group, including permits
+	// already minted under it. The chain is rechecked here because
+	// revocation can land between authorize and commit; a stop order
+	// that only blocked future permits would not stop anything. A
+	// delegation the registry cannot confirm active also fences.
+	if effect.DelegationID != "" {
+		delegation, ok := b.delegations[effectKey(effect.TenantID, effect.DelegationID)]
+		active := ok && delegation.RunID == effect.RunID &&
+			b.chainActiveLocked(effect.TenantID, delegation) == nil
+		if !active {
+			if ok {
+				b.appendEvent(delegationEvent(delegation, "fence", now, map[string]any{
+					"effect_id": effect.ID,
+				}))
+			}
+			b.transitionTo(effect, StateCancelled, now)
+			return nil, &TransitionError{EffectID: effect.ID, From: StateCancelled,
+				Why: "delegation revoked; the effect is fenced"}
+		}
 	}
 
 	sink := b.sinkFor(effect.ProposedAction.Destination)

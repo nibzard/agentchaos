@@ -54,6 +54,16 @@ type RunContext struct {
 	TaskID         string
 	GrantExpiresAt string
 	AllowedClasses []string
+
+	// RootCapabilities narrows the run root for delegation minting:
+	// the first delegation in a tree narrows from here. Nil means
+	// the run's classes apply and destinations and resources are
+	// unrestricted (spec 10).
+	RootCapabilities *Capabilities
+	// RootBudget is the cumulative budget the run's delegation trees
+	// share. Nil means no broker-enforced budget; the grant window
+	// still bounds everything (spec 10, F13).
+	RootBudget *Budget
 }
 
 // LoadPolicy decodes and indexes a policy document, computing its
@@ -85,6 +95,16 @@ func LoadPolicy(data []byte) (*Policy, error) {
 		}
 		if rule.MaxSizeBytes < 0 {
 			return nil, fmt.Errorf("operation %s: negative size ceiling", rule.Name)
+		}
+		if rule.AmountLimit != nil {
+			// Money ceilings feed the delegation budget arithmetic,
+			// which assumes non-negative micros (AC-008).
+			if rule.AmountLimit.Micros < 0 {
+				return nil, fmt.Errorf("operation %s: negative amount limit", rule.Name)
+			}
+			if !reCurrency.MatchString(rule.AmountLimit.Currency) {
+				return nil, fmt.Errorf("operation %s: amount limit currency must be three letters", rule.Name)
+			}
 		}
 		for _, destination := range rule.Destinations {
 			if err := validateRuleDestination(rule.Name, destination); err != nil {

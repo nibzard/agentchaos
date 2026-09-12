@@ -56,6 +56,7 @@ var (
 	reOperation = regexp.MustCompile(`^[a-z][a-z0-9_.]{1,127}$`)
 	reResource  = regexp.MustCompile(`^[a-z][a-z0-9._:/-]{2,252}$`)
 	reSemVer    = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$`)
+	reCurrency  = regexp.MustCompile(`^[A-Z]{3}$`)
 	reTimestamp = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$`)
 )
 

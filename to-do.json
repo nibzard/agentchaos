@@ -259,7 +259,7 @@
       "id": "T008",
       "title": "Implement bounded delegation",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Ensure child agents can only narrow capabilities and share the parent cumulative budget.",
       "depends_on": [
         "T007"
@@ -267,7 +267,20 @@
       "tags": [
         "security",
         "delegation"
-      ]
+      ],
+      "files": [
+        "broker/delegation.go",
+        "broker/delegation_test.go",
+        "broker/delegation_http_test.go",
+        "broker/delegation_regression_test.go",
+        "broker/broker.go",
+        "broker/policy.go",
+        "broker/contract.go",
+        "broker/server.go",
+        "broker/crosslang_test.go",
+        "broker/README.md"
+      ],
+      "updated_at": "2026-09-12T10:30:00Z"
     },
     {
       "id": "T009",

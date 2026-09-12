@@ -1,11 +1,13 @@
 package broker
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -43,6 +45,8 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/effects/authorizations", s.authorize)
 	mux.HandleFunc("POST /v1/effects/{id}/commit", s.commit)
+	mux.HandleFunc("POST /v1/delegations", s.delegate)
+	mux.HandleFunc("POST /v1/delegations/{id}/revocation", s.revokeDelegation)
 	mux.HandleFunc("GET /healthz", s.health)
 	return mux
 }
@@ -172,6 +176,242 @@ func (s *Server) commit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, effect)
 }
 
+// delegate mints a child delegation after the narrowing rules
+// (spec 10, AC-008). Service and operator roles only: a worker never
+// mints capability for itself.
+func (s *Server) delegate(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",
+			"request body could not be read", false)
+		return
+	}
+	key := r.Header.Get(HeaderIdem)
+	if !reIdemKey.MatchString(key) {
+		writeProblem(w, requestID, http.StatusBadRequest, "idempotency_key_required",
+			"mutations require an Idempotency-Key matching idk_[A-Za-z0-9_-]{8,128}", false)
+		return
+	}
+	principal := principalFrom(r)
+	if err := s.Broker.CheckAuthority(principal); err != nil {
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	digest := bodyDigest(body)
+	reply, replay, err := s.Broker.Reserve(principal.TenantID, key, digest)
+	if err != nil {
+		writeReservationProblem(w, requestID, err)
+		return
+	}
+	if replay {
+		writeJSON(w, http.StatusOK, reply)
+		return
+	}
+
+	request, err := DecodeDelegationRequest(body)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusBadRequest, "delegation_schema",
+			err.Error(), false)
+		return
+	}
+	if problems := request.ValidateDelegationRequest(); len(problems) > 0 {
+		s.Broker.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusUnprocessableEntity, "delegation_schema",
+			"delegation request violates the Delegation contract", false,
+			WithErrors(problems))
+		return
+	}
+	delegation, err := s.Broker.Delegate(principal, request)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		var refusal *DelegationRefusal
+		switch {
+		case errors.Is(err, errDelegationExists):
+			writeProblem(w, requestID, http.StatusConflict, "delegation_exists",
+				"delegation id already exists; mint under a fresh id", false)
+		case errors.As(err, &refusal):
+			writeProblem(w, requestID, http.StatusUnprocessableEntity, "delegation_refused",
+				"delegation would widen; children can only narrow (AC-008)", false,
+				WithErrors(refusal.Errors))
+		default:
+			writeAuthProblem(w, requestID, err)
+		}
+		return
+	}
+	s.Broker.Complete(principal.TenantID, key, digest, delegation)
+	writeJSON(w, http.StatusOK, delegation)
+}
+
+// revokeDelegation fences a delegation group. The body carries an
+// optional reason.
+func (s *Server) revokeDelegation(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",
+			"request body could not be read", false)
+		return
+	}
+	key := r.Header.Get(HeaderIdem)
+	if !reIdemKey.MatchString(key) {
+		writeProblem(w, requestID, http.StatusBadRequest, "idempotency_key_required",
+			"mutations require an Idempotency-Key matching idk_[A-Za-z0-9_-]{8,128}", false)
+		return
+	}
+	delegationID := r.PathValue("id")
+	if !matches(`^dlg_[a-z0-9]{8,64}$`, delegationID) {
+		writeProblem(w, requestID, http.StatusBadRequest, "delegation_id_invalid",
+			"delegation id must match dlg_[a-z0-9]{8,64}", false)
+		return
+	}
+	principal := principalFrom(r)
+	if err := s.Broker.CheckAuthority(principal); err != nil {
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	// The digest binds the delegation id and the body with a separator
+	// the id pattern cannot produce: a bare concatenation would let a
+	// different (id, body) pair replay this key's stored reply.
+	digest := bodyDigest(append(append([]byte(delegationID), 0), body...))
+	reply, replay, err := s.Broker.Reserve(principal.TenantID, key, digest)
+	if err != nil {
+		writeReservationProblem(w, requestID, err)
+		return
+	}
+	if replay {
+		writeJSON(w, http.StatusOK, reply)
+		return
+	}
+
+	reason := ""
+	if len(bytes.TrimSpace(body)) > 0 {
+		revocation, err := DecodeRevocation(body)
+		if err != nil {
+			s.Broker.Release(principal.TenantID, key, digest)
+			writeProblem(w, requestID, http.StatusBadRequest, "delegation_schema",
+				err.Error(), false)
+			return
+		}
+		reason = revocation.Reason
+	}
+	delegation, err := s.Broker.RevokeDelegation(principal, delegationID, reason)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		if errors.Is(err, errDelegationNotFound) {
+			writeProblem(w, requestID, http.StatusNotFound, "delegation_not_found",
+				"no such delegation for this tenant", false)
+			return
+		}
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	s.Broker.Complete(principal.TenantID, key, digest, delegation)
+	writeJSON(w, http.StatusOK, delegation)
+}
+
+// Exact key sets for delegation decoding. Non-contract spellings
+// fail closed, exactly like proposals (AC-001, spec 18.3).
+var (
+	delegationRequestKeys = map[string]bool{
+		"id": true, "run_id": true, "parent_actor": true,
+		"child_actor": true, "parent_delegation_id": true,
+		"capabilities": true, "cumulative_budget": true,
+	}
+	capabilityKeys = map[string]bool{
+		"allowed_action_classes": true, "allowed_destinations": true,
+		"allowed_resources": true,
+	}
+	budgetKeys = map[string]bool{
+		"max_total_cost": true, "max_total_tokens": true, "max_effects": true,
+	}
+	moneyKeys = map[string]bool{"currency": true, "micros": true}
+)
+
+// DecodeDelegationRequest parses a mint request body with exact-key
+// validation at every nesting level.
+func DecodeDelegationRequest(data []byte) (*DelegationRequest, error) {
+	strict, err := decodeExact(data, delegationRequestKeys)
+	if err != nil {
+		return nil, err
+	}
+	if raw, ok := strict["capabilities"]; ok {
+		if _, err := decodeExact(raw, capabilityKeys); err != nil {
+			return nil, fmt.Errorf("capabilities: %w", err)
+		}
+	}
+	if raw, ok := strict["cumulative_budget"]; ok {
+		budget, err := decodeExact(raw, budgetKeys)
+		if err != nil {
+			return nil, fmt.Errorf("cumulative_budget: %w", err)
+		}
+		if cost, ok := budget["max_total_cost"]; ok {
+			if _, err := decodeExact(cost, moneyKeys); err != nil {
+				return nil, fmt.Errorf("max_total_cost: %w", err)
+			}
+		}
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var request DelegationRequest
+	if err := decoder.Decode(&request); err != nil {
+		return nil, fmt.Errorf("unknown or malformed field: %w", err)
+	}
+	if decoder.More() {
+		return nil, fmt.Errorf("trailing content after JSON document")
+	}
+	return &request, nil
+}
+
+// MaxRevocationReason bounds the advisory revoke reason: the evidence
+// plane keeps minimized payloads (spec 19).
+const MaxRevocationReason = 512
+
+// revocationRequest is the revoke body.
+type revocationRequest struct {
+	Reason string `json:"reason"`
+}
+
+// DecodeRevocation parses a revoke request body.
+func DecodeRevocation(data []byte) (revocationRequest, error) {
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&raw); err != nil {
+		return revocationRequest{}, fmt.Errorf("malformed revocation body: %w", err)
+	}
+	for key := range raw {
+		if key != "reason" {
+			return revocationRequest{}, fmt.Errorf(
+				"unknown or misspelled field %q: only reason is accepted", key)
+		}
+	}
+	var revocation revocationRequest
+	if err := json.Unmarshal(data, &revocation); err != nil {
+		return revocationRequest{}, fmt.Errorf("malformed revocation body: %w", err)
+	}
+	if len(revocation.Reason) > MaxRevocationReason {
+		return revocationRequest{}, fmt.Errorf(
+			"reason exceeds %d characters; keep it short", MaxRevocationReason)
+	}
+	return revocation, nil
+}
+
+// decodeExact decodes one object level and rejects any key outside
+// the allowed set.
+func decodeExact(data []byte, allowed map[string]bool) (map[string]json.RawMessage, error) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("malformed object: %w", err)
+	}
+	for key := range raw {
+		if !allowed[key] {
+			return nil, fmt.Errorf(
+				"unknown or misspelled field %q: contract keys are exact snake_case", key)
+		}
+	}
+	return raw, nil
+}
+
 // writeReservationProblem maps the two reservation failures.
 func writeReservationProblem(w http.ResponseWriter, requestID string, err error) {
 	if errors.Is(err, errIdempotencyConflict) {
@@ -209,6 +449,8 @@ func writeAuthProblem(w http.ResponseWriter, requestID string, err error) {
 			"authenticated tenant does not match the record", false)
 	case strings.Contains(message, "cannot authorize"),
 		strings.Contains(message, "cannot commit"),
+		strings.Contains(message, "cannot delegate"),
+		strings.Contains(message, "cannot revoke"),
 		strings.Contains(message, "cannot drive broker authority"):
 		writeProblem(w, requestID, http.StatusForbidden, "role_forbidden",
 			message, false)

@@ -10,10 +10,16 @@ and holds the only downstream credentials.
 ## Surface
 
 ```text
-POST /v1/effects/authorizations   evaluate a proposal (allow or deny)
-POST /v1/effects/{id}/commit      dispatch a bound effect
-GET  /healthz                     liveness
+POST /v1/effects/authorizations        evaluate a proposal (allow or deny)
+POST /v1/effects/{id}/commit           dispatch a bound effect
+POST /v1/delegations                   mint a child delegation
+POST /v1/delegations/{id}/revocation   fence a delegation group
+GET  /healthz                          liveness
 ```
+
+The delegation routes extend the fixed core set of spec 18.2; the
+spec's table is a minimum, and these mutations follow the same
+authentication, role, and idempotency rules as the core set.
 
 Callers authenticate through the identity headers `X-ACX-Actor`,
 `X-ACX-Tenant`, and `X-ACX-Role`, set by the deployment's
@@ -150,6 +156,77 @@ against the shared contracts in `shared/schemas/`. A cross-language
 test (`crosslang_test.go`) feeds every emitted shape — including
 staged, compensating, and reconciled documents — through the
 `acx-schemas` Python validator and skips when it is not installed.
+
+## Delegation
+
+Parent-to-child delegation can only narrow capabilities and shares the
+parent's cumulative budget (spec 10, AC-008). The broker is the
+enforcement point: it mints delegations, and every authorize that
+carries a `delegation_id` passes the delegation gate after the
+deterministic gate.
+
+**Minting.** `POST /v1/delegations` checks, in one critical section:
+
+- the run exists in the caller's tenant, and the id is fresh
+  (append-only, like the effect ledger);
+- a nested delegation's parent exists in the same run, is active, and
+  its holder matches `parent_actor` — only the delegation holder can
+  delegate further;
+- every capability narrows: action classes, destinations, and
+  resources must be subsets of the parent scope;
+- the budget never rises: cost, tokens, and effects stay at or below
+  the parent's cumulative budget, and the cost currency must match;
+- the tree depth stays at or below eight (F13).
+
+The parent scope of a tree root is the run grant itself: the run's
+classes, optionally narrowed by `RootCapabilities` and bounded by
+`RootBudget`. A run whose root capabilities exceed its permitted
+classes refuses every mint with `run_root_invalid`.
+
+An omitted or empty capability array means nothing permitted — the
+fail-closed reading. Only the run root's `RootCapabilities` can leave a
+scope unrestricted, and only by omitting the array there. A parent
+delegation that narrowed destinations to nothing produces children that
+hold nothing: widening is not representable at any depth (AC-008).
+
+A widening request is refused with 422 `delegation_refused` and one
+contract error per violation. Service and operator roles only: a
+worker never mints capability for itself.
+
+**Effects.** A proposal with `delegation_id` must name an active
+delegation in the same run, its actor must be the delegation holder,
+and its class, destination, and resource must fall inside the
+delegation's narrowed capabilities. The shared cumulative budget then
+holds tree-wide (F13): permitted effects — records that carry an
+authorization — count against the tightest ceiling along the ancestor
+chain, cost is the authorized money ceiling summed as a fail-closed
+upper bound, and a run root budget counts every delegated effect of
+the run. Sums saturate at the ceiling instead of wrapping, so extreme
+money values cannot disarm the check. A rule whose money currency
+differs from the budget's denies with `cost_currency_mismatch`: an
+incomparable ceiling is an exceeded one. Denied effects consume
+nothing; authorized effects keep counting even after a cancelled or
+expired dispatch, because the permit was minted and consumed — that is
+the fail-closed side.
+
+**Revocation.** `POST /v1/delegations/{id}/revocation` marks the
+delegation revoked and fences the whole group: effects under any
+descendant deny with `delegation_revoked`, no descendant can mint
+further, and a permit minted before the revoke can no longer dispatch —
+commit rechecks the chain, cancels the effect, and journals a `fence`
+event. The advisory reason is capped at 512 characters (spec 19 payload
+minimization). Revocation is idempotent — a repeated revoke returns
+the revoked record and journals one revoke event. Attenuate or revoke
+is the only mutation after minting (spec 18.1).
+
+**Declared limitation.** `max_total_tokens` is observed in the
+execution plane, not by the broker: the broker has no token telemetry,
+so the runner enforces that ceiling. The Delegation contract carries
+it so the budget stays whole in one place.
+
+Every mint and revoke lands in the evidence journal as a `delegation`
+event with the broker as its source. Delegation ids are tenant-scoped:
+a cross-tenant lookup is indistinguishable from absence.
 
 ## Later tasks
 
