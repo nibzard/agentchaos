@@ -958,7 +958,7 @@
       "id": "T036",
       "title": "Make evidence rendering inert",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Render hostile payloads as inert text. Prevent active HTML, tool execution, or automatic external retrieval from logs.",
       "depends_on": [
         "T033"
@@ -966,7 +966,15 @@
       "tags": [
         "ui",
         "security"
-      ]
+      ],
+      "files": [
+        "ui/src/inert.ts",
+        "ui/src/inert.test.ts",
+        "ui/src/timeline.ts",
+        "ui/src/timeline.test.ts",
+        "ui/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T037",

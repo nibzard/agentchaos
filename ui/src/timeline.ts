@@ -7,6 +7,11 @@
 // from a log — object references are digests to read elsewhere, never
 // fetches made here.
 
+import {
+  renderInline,
+  renderMetadataOnly,
+  renderObjectRef,
+} from "./inert";
 import { escapeHtml } from "./overview";
 
 export type TrustLabel = "worker_claim" | "collector_fact" |
@@ -440,15 +445,14 @@ function renderEvent(event: TimelineEvent): string {
 
 function payloadText(event: TimelineEvent): string {
   if (event.payloadKind === "object_ref") {
-    const digest = event.payloadDigest === null ? "unknown digest"
-      : escapeHtml(event.payloadDigest);
-    return `object <code>${digest}</code> — read the raw content from ` +
-      `the evidence store; it is not fetched here`;
+    return renderObjectRef(event.payloadDigest);
   }
   if (event.payloadKind === "inline") {
-    const content = event.payloadContent === null ? ""
-      : `: ${escapeHtml(event.payloadContent)}`;
-    return `inline payload${content}`;
+    return renderInline({
+      text: event.payloadContent ?? "",
+      redacted: event.redacted,
+      truncated: event.truncated,
+    });
   }
-  return "metadata only";
+  return renderMetadataOnly();
 }

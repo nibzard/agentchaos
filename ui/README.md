@@ -23,6 +23,8 @@ ui/src/compare.test.ts   comparison suite
 ui/src/recovery.ts       recovery and governance view: fenced groups,
                          unknown effects, dirty environments, lever
 ui/src/recovery.test.ts  recovery suite
+ui/src/inert.ts          shared inert payload renderer and checker
+ui/src/inert.test.ts     hostile-input suite
 ui/src/main.ts           overview page entry: data island -> page
 ui/src/builder-page.ts   builder page entry: islands -> builder panel
 ui/src/timeline-page.ts  timeline page entry: island -> lanes
@@ -168,3 +170,23 @@ utility/safety/latency/cost frontier and scoped assurance cards.
   own audit trail, separate from run operations. There is no human
   approval inbox anywhere: routine operation never queues a human
   approval, so the page has none to show.
+
+## Inert evidence rendering
+
+`inert.ts` (T036) is the one module every view uses to render an
+evidence payload. Its rules:
+
+- Every payload character reaches the output escaped or named;
+  nothing is silently dropped. Control characters, ANSI escapes,
+  bidi overrides, join controls, and byte-order marks render in
+ *named* form (`\u{202e}`), so a text node cannot be made to lie.
+- No anchor, image, frame, or form element ever appears in payload
+  output; URLs and data URIs stay visible text, so a log cannot
+  trigger a retrieval by rendering. Object references are digests
+  with an explicit "this page does not fetch it".
+- Inline payloads over 2000 characters are cut and marked; the full
+  bytes live in the evidence store.
+- `isInertHtml` checks rendered output — no active tags, no handler
+  attributes, no URL-bearing attributes — and the hostile-input
+  suite runs every payload above through it, including through the
+  full timeline render.

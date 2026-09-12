@@ -2,6 +2,7 @@
 // suites: strict-parse rejections with paths, lane assignment,
 // correlation pairing, missing-half visibility, and inert rendering.
 import { describe, expect, test } from "bun:test";
+import { isInertHtml } from "./inert";
 import {
   EffectPairing,
   lanes,
@@ -313,7 +314,7 @@ describe("renderTimeline", () => {
     const html = render([receiptDocument()]);
     expect(html).toContain("sha256:a1a1");
     expect(html).not.toMatch(/XMLHttpRequest|<img|<script/);
-    expect(html).toContain("not fetched here");
+    expect(html).toContain("does not fetch it");
   });
 
   test("renders inline content escaped", () => {
@@ -374,5 +375,16 @@ describe("renderTimeline", () => {
     const html = renderTimeline(parseTimeline(document));
     expect(html).not.toContain("<script");
     expect(html).toContain("&lt;script&gt;bad()&lt;/script&gt;");
+  });
+
+  test("a hostile payload stays inert through the full render", () => {
+    const html = render([eventDocument({
+      payload: { kind: "inline", content: hostile, redacted: false,
+        truncated: false },
+    })]);
+    const item = html.slice(html.indexOf('<li class="event'),
+      html.indexOf("</li>", html.indexOf('<li class="event')) + 5);
+    expect(isInertHtml(item)).toBe(true);
+    expect(html).toContain("&lt;img src=x onerror=");
   });
 });
