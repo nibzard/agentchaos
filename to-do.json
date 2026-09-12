@@ -1032,7 +1032,7 @@
       "id": "T039",
       "title": "Implement adapter conformance tests",
       "priority": 2,
-      "status": "todo",
+      "status": "done",
       "details": "Test advertised capabilities, unsupported paths, interception location, side-effect semantics, logging, teardown, isolation coverage, and cleanup guarantees.",
       "depends_on": [
         "T006",
@@ -1041,7 +1041,17 @@
       "tags": [
         "adapters",
         "tests"
-      ]
+      ],
+      "files": [
+        "execution-plane/acx_adapters/__init__.py",
+        "execution-plane/acx_adapters/contract.py",
+        "execution-plane/acx_adapters/adapter.py",
+        "execution-plane/acx_adapters/conformance.py",
+        "execution-plane/tests/test_adapter_conformance.py",
+        "execution-plane/pyproject.toml",
+        "execution-plane/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T040",

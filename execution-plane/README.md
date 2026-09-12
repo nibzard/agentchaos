@@ -198,6 +198,53 @@ statistical sample size (spec 12).
 The executor records every injected fault file (`fault_targets`), which
 is what the lifecycle's cleanup verifier walks after the pair.
 
+## Fault adapters and conformance
+
+`acx_adapters` is the adapter interface and its conformance suite
+(spec 8.2, 9.3, AC-028). An adapter MUST advertise its capabilities,
+its unsupported paths, its interception location, its side-effect
+semantics, and its cleanup guarantee, and it MUST pass the suite
+before the product calls it contained.
+
+The manifest is a strict closed contract: unknown fields fail, every
+enumerated value comes from a fixed set, and together `capabilities`
+and `unsupported_paths` must cover all nine fault families — silence
+about a family is ambiguity, and ambiguity fails validation.
+
+`run_conformance(adapter)` drives the adapter itself and returns a
+publishable report. Nine checks, one per promise:
+
+- `manifest-shape` — the advertisement validates.
+- `advertised-capabilities` — every claimed family has a probe fault
+  the adapter can actually apply.
+- `unsupported-paths` — an unadvertised family refuses explicitly;
+  silent application fails.
+- `interception-location` — the site is outside the worker, and a
+  receipt arrives with no worker running at all.
+- `side-effect-semantics` — observed writes match the declared effect
+  classes; declaring `none` while writing fails.
+- `logging` — every apply emits one complete receipt
+  (`emitted_by: adapter_outside_worker`), and the same fault yields
+  the same receipt event id.
+- `teardown` — the workspace returns to its installed state, even
+  after a failed apply.
+- `cleanup-guarantee` — the guarantee covers the declared effects
+  (`external_write` needs `external_undo`).
+- `isolation-coverage` — nothing outside the workspace changes, and
+  fault paths that escape the workspace refuse.
+
+The suite treats adapters as untrusted: any exception other than
+`AdapterRefusal` fails the check that saw it, and a hostile adapter
+that raises everywhere still gets a full report with nine failures.
+The test suite proves rejections the same way — the reference adapter
+passes whole, and one broken adapter per promise fails exactly its own
+check.
+
+`ReferenceFileAdapter` targets the file family and mirrors what the
+scenario library's executor simulates: fault files written into the
+workspace from outside the worker, receipts deterministic over the
+fault's identity, teardown removing exactly what apply added.
+
 ## Tests
 
 ```bash
