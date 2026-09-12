@@ -10,8 +10,9 @@ and holds the only downstream credentials.
 ## Surface
 
 ```text
-POST /v1/effects/authorizations        evaluate a proposal (allow or deny)
+POST /v1/effects/authorizations        evaluate a proposal (allow, deny, or hold)
 POST /v1/effects/{id}/commit           dispatch a bound effect
+POST /v1/effects/{id}/review           attach a machine-review decision
 POST /v1/delegations                   mint a child delegation
 POST /v1/delegations/{id}/revocation   fence a delegation group
 POST /v1/runs/{id}/stop                execute the stop protocol
@@ -49,9 +50,15 @@ atomic: concurrent requests sharing a key execute the mutation once.
 The operation registry in `policy.json` is the boundary of supported
 external tool calls. Each operation declares its action class, its
 side-effect semantics (`read` or `mutate`), allowed destinations, a
-size ceiling, and an optional money limit. The gate fails closed on:
+size ceiling, and an optional money limit. Three more rule flags carry
+the deterministic supervision gates (spec 10, 11.1): `hard_deny` bans
+an operation outright, `requires_review` holds passing proposals for a
+machine review, and `requires_resource_version` demands the proposal
+pin the resource version it acted on. The gate fails closed on:
 
 - an operation with no rule (`unknown_operation`);
+- a banned operation (`operation_hard_denied`) — checked before every
+  other rule, and no review verdict can lift it (spec 11.2);
 - a run the broker does not know, or a run from another tenant;
 - an expired grant (expiry equal to now authorizes nothing);
 - a class the run does not permit, or a proposal whose class label
@@ -59,19 +66,74 @@ size ceiling, and an optional money limit. The gate fails closed on:
 - a destination outside the rule's scope: http(s) entries match the
   exact scheme, host, and port plus a path prefix, so a host that
   merely starts with an allowed host's name is denied;
-- content above the size ceiling.
+- content above the size ceiling;
+- a rule that pins resource versions and a proposal without one
+  (`resource_version_required`).
 
 Reads are not assumed harmless (spec 6.1): `http.request` is an A1
 brokered read with destination and size checks.
 
 An allowed proposal gets a bound permit: task id, policy version and
 digest, destination and argument digest from the proposal, a size or
-money limit, a five-minute expiry clamped to the grant window, and a
-single-use nonce. A new authorization mints a fresh nonce. Denied
-effects carry no permit, so a replayed denial cannot later look
-pre-authorized (AC-009).
+money limit, a five-minute expiry clamped to the grant window, a
+single-use nonce, and — when the rule pins versions — the resource
+version the proposal acted on. A new authorization mints a fresh
+nonce. Denied and held effects carry no permit, so a replayed denial
+cannot later look pre-authorized (AC-009), and a held effect cannot
+dispatch.
+
+## Review holds
+
+A rule with `requires_review` turns a passing proposal into a `hold`:
+the decision carries verdict `hold` with reason `review_required`, and
+the effect rests `PROPOSED` with no permit. The hold is not a deny —
+the deterministic checks all passed — but nothing dispatches until a
+well-formed `ALLOW` review arrives.
+
+`POST /v1/effects/{id}/review` attaches a machine-review decision
+(spec 11.2) and re-runs the deterministic decision. The body is a
+`Review` document: verdict (`ALLOW`, `WATCH`, `DENY`, or `ABSTAIN`),
+reviewer actor id, policy references, event references, rationale,
+limitations, and latency. Decoding is exact-key like proposals
+(AC-001); contract violations fail with 422 `review_schema`.
+
+- `ALLOW` re-runs the full decision pipeline — the gate, the stop
+  fence, quarantine, compensation, and delegation narrowing — under
+  the live policy and state. A review never widens what the gate
+  allows: if the operation lost its rule while the effect was held,
+  the re-run denies with `unknown_operation`; if the run stopped or
+  the artifact quarantined, the re-run denies for that reason. Only a
+  pipeline that passes on its own mints the permit.
+- `DENY` is final: the effect rests `DENIED`, and no later `ALLOW` can
+  outvote it (409 `review_deny_final`). A gate-denied or hard-denied
+  effect is equally terminal for reviews.
+- `WATCH` and `ABSTAIN` keep the hold. ABSTAIN is not a benign
+  verdict: absence of a decision is not consent.
+- A review on an effect whose rule never required one is refused with
+  409 `review_not_required`: a reviewer cannot mint authority over
+  arbitrary effects.
+
+Only service and operator roles may attach reviews; worker and
+collector identities are refused (spec 18.3). A worker cannot attach
+the review that releases its own effect.
 
 ## Dispatch and receipts
+
+Two bindings are rechecked at dispatch, because the world can move
+between authorization and commit:
+
+- **Policy version.** A permit carries the digest of the policy that
+  minted it. If the deployment replaced the policy since, the permit
+  is stale: the commit expires the effect and refuses, and the worker
+  re-proposes under the new version. A permit never dispatches under
+  rules nobody re-approved.
+- **Resource version.** When the permit binds a resource version and
+  the sink implements `VerifyResourceVersion`, the broker reads the
+  version the resource carries now, before any send. A mismatch — the
+  resource changed after authorization — cancels the effect and
+  journals a `broker_decision` fence event (spec 10, F15). A sink that
+  cannot verify never dispatches on an unverifiable binding: the check
+  failing is not the check passing.
 
 `commit` runs a two-phase dispatch where the sink's service supports
 it (spec 10.1):
@@ -293,11 +355,6 @@ report; every later stop replays it without re-journaling. A late
 lifecycle event after the terminal state was recorded sets the
 report's `reopened` flag and journals one `stop_reopened` event:
 prior assurance is stale.
-
-## Later tasks
-
-Risk-routed machine review attaches `Review` records later; the
-deterministic gate alone decides these effects.
 
 ## Build and test
 

@@ -30,6 +30,19 @@ type OperationRule struct {
 	Destinations []string `json:"destinations"` // allowed destination prefixes
 	MaxSizeBytes int64    `json:"max_size_bytes"`
 	AmountLimit  *Money   `json:"amount_limit,omitempty"` // costed operations
+
+	// HardDeny bans the operation outright. A hard deny is enforced
+	// before every other check and no review verdict can lift it
+	// (spec 11.2: hard denies cannot be outvoted).
+	HardDeny bool `json:"hard_deny,omitempty"`
+	// RequiresReview holds the effect PROPOSED until a well-formed
+	// ALLOW review arrives (spec 10, 11.1). The deterministic gate
+	// still runs in full; the review never widens scope.
+	RequiresReview bool `json:"requires_review,omitempty"`
+	// RequiresResourceVersion demands the proposal pin the resource
+	// version it acted on, so time-of-check/time-of-use drift is
+	// detectable (spec 10, F15).
+	RequiresResourceVersion bool `json:"requires_resource_version,omitempty"`
 }
 
 // Policy is the deterministic gate input. It is a versioned
@@ -83,6 +96,11 @@ func LoadPolicy(data []byte) (*Policy, error) {
 	}
 	policy.byName = make(map[string]OperationRule, len(policy.Operations))
 	for _, rule := range policy.Operations {
+		if rule.HardDeny && (rule.RequiresReview || rule.RequiresResourceVersion) {
+			return nil, fmt.Errorf(
+				"operation %s: a hard deny never reaches review or dispatch; "+
+					"it cannot also require either", rule.Name)
+		}
 		switch rule.ActionClass {
 		case ClassA1, ClassA2:
 		default:
@@ -146,10 +164,15 @@ func (p *Policy) Digest() (string, error) {
 
 // GateVerdict is the deterministic gate's decision on one proposal.
 type GateVerdict struct {
-	Allowed    bool
-	Reason     string // stable deny code, empty when allowed
-	Rule       *OperationRule
-	PolicyRefs []string
+	Allowed bool
+	// NeedsReview marks a proposal that passed every deterministic
+	// check but whose rule demands a machine review before a permit
+	// exists (spec 10, 11.1). It is not a deny: the effect stays
+	// PROPOSED until a well-formed ALLOW review arrives.
+	NeedsReview bool
+	Reason      string // stable deny code, empty when allowed
+	Rule        *OperationRule
+	PolicyRefs  []string
 }
 
 // Evaluate runs the deterministic gate (spec 11.1 layer 1): scope,
@@ -161,6 +184,14 @@ func (p *Policy) Evaluate(effect *Effect, run *RunContext, now string) GateVerdi
 	if !known {
 		return GateVerdict{
 			Reason:     "unknown_operation",
+			PolicyRefs: []string{p.ref("operations." + proposal.Operation)},
+		}
+	}
+	if rule.HardDeny {
+		// Before anything else: a banned operation denies no matter
+		// what scope, run, or review would have said (spec 11.2).
+		return GateVerdict{
+			Reason:     "operation_hard_denied",
 			PolicyRefs: []string{p.ref("operations." + proposal.Operation)},
 		}
 	}
@@ -206,6 +237,20 @@ func (p *Policy) Evaluate(effect *Effect, run *RunContext, now string) GateVerdi
 			PolicyRefs: []string{p.ref("operations." + proposal.Operation)},
 		}
 	}
+	if rule.RequiresResourceVersion && proposal.ResourceVersion == "" {
+		return GateVerdict{
+			Reason:     "resource_version_required",
+			PolicyRefs: []string{p.ref("operations." + proposal.Operation)},
+		}
+	}
+	if rule.RequiresReview && effect.Review == nil {
+		return GateVerdict{
+			NeedsReview: true,
+			Reason:      "review_required",
+			Rule:        &rule,
+			PolicyRefs:  []string{p.ref("operations." + proposal.Operation)},
+		}
+	}
 	return GateVerdict{
 		Allowed:    true,
 		Rule:       &rule,
@@ -215,6 +260,13 @@ func (p *Policy) Evaluate(effect *Effect, run *RunContext, now string) GateVerdi
 
 func (p *Policy) ref(suffix string) string {
 	return "pol_" + p.Version + "/" + suffix
+}
+
+// ruleFor looks up an operation's rule for callers that need the rule
+// itself, not just a verdict.
+func (p *Policy) ruleFor(operation string) (OperationRule, bool) {
+	rule, ok := p.byName[operation]
+	return rule, ok
 }
 
 // destinationAllowed reports whether the destination falls inside a

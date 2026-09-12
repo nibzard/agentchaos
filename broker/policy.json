@@ -1,7 +1,7 @@
 {
   "kind": "BrokerPolicy",
   "api_version": "v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "operations": [
     {
       "name": "http.request",
@@ -24,6 +24,23 @@
       "destinations": ["https://api.github.com/"],
       "max_size_bytes": 65536,
       "amount_limit": {"currency": "USD", "micros": 10000}
+    },
+    {
+      "name": "repo.push",
+      "action_class": "A2",
+      "semantics": "mutate",
+      "destinations": ["https://api.github.com/"],
+      "max_size_bytes": 5242880,
+      "requires_review": true,
+      "requires_resource_version": true
+    },
+    {
+      "name": "payment.send",
+      "action_class": "A2",
+      "semantics": "mutate",
+      "destinations": [],
+      "max_size_bytes": 0,
+      "hard_deny": true
     }
   ]
 }

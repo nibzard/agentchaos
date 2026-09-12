@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -52,6 +53,17 @@ type Sink interface {
 	// A timeout is reported as OutcomeTimeout and reconciled later;
 	// dispatch must never blindly reissue (spec 10.1).
 	Dispatch(effect *Effect, now string) SinkResult
+}
+
+// VersionedSink is a sink whose service supports conditional checks
+// on a resource version (spec 10: "resource version where
+// supported"). VerifyResourceVersion reports the version the resource
+// carries now; the broker compares it with the permit's binding
+// before dispatch. A sink that cannot verify reports an error, and
+// the effect never dispatches on an unverifiable binding.
+type VersionedSink interface {
+	Sink
+	VerifyResourceVersion(effect *Effect) (string, error)
 }
 
 // SinkResult is what a sink reports back.
@@ -338,20 +350,33 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 		return nil, nil, errEffectExists
 	}
 
-	now := b.ClockUTC()
-	run := b.runs[proposal.RunID]
+	effect := cloneEffect(proposal)
+	stored, decision := b.decideLocked(principal, effect, b.ClockUTC())
+	return stored, decision, nil
+}
+
+// decideLocked runs the deterministic decision pipeline on an effect
+// record the caller holds: the gate, the stop fence, quarantine,
+// compensation, and delegation narrowing, then the decision, permit,
+// journal entry, and store write (spec 10, 11.1). It is the single
+// path that mints permits, used by both first authorization and the
+// post-review re-decision, so a review can never authorize anything
+// the gate alone would not.
+func (b *Broker) decideLocked(principal *Principal, effect *Effect, now string) (*Effect, *BrokerDecision) {
+	scoped := effectKey(principal.TenantID, effect.ID)
+	run := b.runs[effect.RunID]
 	// A stopped run fences new permits (spec 13.3): the only proposals
 	// still allowed are the stop protocol's own compensations, which
 	// dispatch under the stop's bounded window because the run's
 	// experiment grant has usually ended. Everything else denies with
 	// run_stopped — a deny is a successful, journaled evaluation.
-	stopped := b.stops[effectKey(principal.TenantID, proposal.RunID)] != nil
+	stopped := b.stops[effectKey(principal.TenantID, effect.RunID)] != nil
 	gateRun := run
 	var verdict GateVerdict
-	if stopped && proposal.CompensationOf == "" {
+	if stopped && effect.CompensationOf == "" {
 		verdict = GateVerdict{
 			Reason:     "run_stopped",
-			PolicyRefs: []string{b.policy.ref("runs." + proposal.RunID)},
+			PolicyRefs: []string{b.policy.ref("runs." + effect.RunID)},
 		}
 	} else {
 		if stopped && run != nil {
@@ -360,43 +385,52 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 				Format("2006-01-02T15:04:05Z")
 			gateRun = &window
 		}
-		verdict = b.policy.Evaluate(proposal, gateRun, now)
+		verdict = b.policy.Evaluate(effect, gateRun, now)
 	}
+	// A held-for-review effect has passed the deterministic checks;
+	// the narrowing fences below apply to it too, so a quarantine or
+	// delegation revocation that lands before the review denies
+	// instead of waiting for one.
+	passed := verdict.Allowed || verdict.NeedsReview
+
 	// A dirty artifact cannot be reassigned to a new experiment
 	// (spec 13.3): quarantined resources deny even before compensation
 	// and delegation narrowing apply.
-	if verdict.Allowed && b.quarantinedArtifact(principal.TenantID, proposal.ProposedAction) {
+	if passed && b.quarantinedArtifact(principal.TenantID, effect.ProposedAction) {
 		verdict = GateVerdict{
 			Reason:     "resource_quarantined",
-			PolicyRefs: []string{b.policy.ref("quarantine." + proposal.ProposedAction.Resource)},
+			PolicyRefs: []string{b.policy.ref("quarantine." + effect.ProposedAction.Resource)},
 		}
+		passed = false
 	}
 
 	// A compensating effect is a new authorized effect that references
 	// a COMMITTED original (spec 10.1). The reference must resolve
 	// within the caller's tenant; anything else fails closed.
-	if verdict.Allowed && proposal.CompensationOf != "" {
+	if passed && effect.CompensationOf != "" {
 		targetState := ""
-		if target, ok := b.effects[effectKey(principal.TenantID, proposal.CompensationOf)]; ok {
+		if target, ok := b.effects[effectKey(principal.TenantID, effect.CompensationOf)]; ok {
 			targetState = target.State
 		}
 		if targetState != StateCommitted {
 			verdict = GateVerdict{
 				Reason:     "compensation_target_invalid",
-				PolicyRefs: []string{b.policy.ref("effects." + proposal.CompensationOf)},
+				PolicyRefs: []string{b.policy.ref("effects." + effect.CompensationOf)},
 			}
+			passed = false
 		}
 	}
 
 	// A delegated effect narrows further under its delegation: the
 	// child identity binds, capabilities subset, and the shared
 	// cumulative budget holds tree-wide (spec 10, AC-008).
-	if verdict.Allowed && proposal.DelegationID != "" {
-		if reason := b.delegationReason(principal.TenantID, proposal, verdict.Rule); reason != "" {
+	if passed && effect.DelegationID != "" {
+		if reason := b.delegationReason(principal.TenantID, effect, verdict.Rule); reason != "" {
 			verdict = GateVerdict{
 				Reason:     reason,
-				PolicyRefs: []string{b.policy.ref("delegations." + proposal.DelegationID)},
+				PolicyRefs: []string{b.policy.ref("delegations." + effect.DelegationID)},
 			}
+			passed = false
 		}
 	}
 
@@ -406,7 +440,18 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 		DeterminedAt:    now,
 		EvidenceEventID: mintEventIDSoon(),
 	}
-	effect := cloneEffect(proposal)
+
+	if verdict.NeedsReview {
+		// Held, not denied: the effect stays PROPOSED until a
+		// well-formed ALLOW review arrives (spec 10, 11.1). A commit
+		// of a held effect is an invalid transition, and no permit
+		// exists to replay.
+		decision.Verdict = "hold"
+		decision.Reason = verdict.Reason
+		b.recordLocked(decision, effect, "hold: "+verdict.Reason)
+		b.effects[scoped] = cloneEffect(effect)
+		return cloneEffect(effect), decision
+	}
 
 	if !verdict.Allowed {
 		decision.Reason = verdict.Reason
@@ -415,7 +460,7 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 			Transition{State: StateDenied, At: now, Actor: brokerSourceID})
 		b.recordLocked(decision, effect, "deny: "+verdict.Reason)
 		b.effects[scoped] = effect
-		return cloneEffect(effect), decision, nil
+		return cloneEffect(effect), decision
 	}
 
 	authorization := &Authorization{
@@ -425,6 +470,9 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 		ExpiresAt:     b.permitExpiry(gateRun),
 		Nonce:         mintNonce(),
 		AuthorizedAt:  now,
+	}
+	if effect.ProposedAction.ResourceVersion != "" {
+		authorization.ResourceVersion = effect.ProposedAction.ResourceVersion
 	}
 	if verdict.Rule.AmountLimit != nil {
 		authorization.AmountLimit = &AmountLimit{Money: *verdict.Rule.AmountLimit}
@@ -439,7 +487,123 @@ func (b *Broker) Authorize(principal *Principal, proposal *Effect) (*Effect, *Br
 	decision.Verdict = "allow"
 	b.recordLocked(decision, effect, "allow: deterministic gate passed")
 	b.effects[scoped] = effect
+	return cloneEffect(effect), decision
+}
+
+// AttachReview records a machine-review decision on a held effect and
+// re-runs the deterministic decision (spec 10, 11.1, 11.2). Only a
+// well-formed ALLOW can release a hold, and it authorizes nothing the
+// gate alone would not: the full pipeline runs again under the live
+// policy, run, quarantine, and delegation state. A review DENY is
+// final — no later ALLOW can outvote it (spec 11.2). WATCH and
+// ABSTAIN keep the effect held; ABSTAIN is not a benign verdict.
+//
+// Reviews arrive from the supervisor system, never the worker: only
+// service and operator roles may attach them.
+func (b *Broker) AttachReview(principal *Principal, effectID string, review *Review) (*Effect, *BrokerDecision, error) {
+	if err := b.CheckAuthority(principal); err != nil {
+		return nil, nil, err
+	}
+	if problems := review.ValidateReview(); len(problems) > 0 {
+		return nil, nil, &ReviewContractError{Problems: problems}
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	scoped := effectKey(principal.TenantID, effectID)
+	stored, ok := b.effects[scoped]
+	if !ok {
+		// A cross-tenant lookup is indistinguishable from a miss.
+		return nil, nil, errNotFound
+	}
+	if err := b.checkPrincipal(principal, stored.TenantID, "review"); err != nil {
+		return nil, nil, err
+	}
+	if stored.State == StateDenied {
+		// Terminal, whichever path denied: the gate, a hard deny, or an
+		// earlier review DENY. None can be outvoted (spec 11.2).
+		return nil, nil, errReviewDenyFinal
+	}
+	rule, known := b.policy.ruleFor(stored.ProposedAction.Operation)
+	if known && !rule.RequiresReview && stored.State != StateProposed {
+		// The live rule never demanded a review: a reviewer cannot mint
+		// authority over arbitrary effects (spec 11.2).
+		return nil, nil, errReviewNotRequired
+	}
+	if stored.State != StateProposed {
+		return nil, nil, &TransitionError{EffectID: effectID, From: stored.State,
+			Why: "only an effect held in PROPOSED can receive a review"}
+	}
+
+	effect := cloneEffect(stored)
+	effect.Review = cloneReview(review)
+	now := b.ClockUTC()
+
+	if review.Verdict == ReviewDeny {
+		decision := &BrokerDecision{
+			Verdict:         "deny",
+			Reason:          "review_denied",
+			PolicyRefs:      []string{b.policy.ref("operations." + effect.ProposedAction.Operation)},
+			DeterminedAt:    now,
+			EvidenceEventID: mintEventIDSoon(),
+		}
+		effect.State = StateDenied
+		effect.Transitions = append(effect.Transitions,
+			Transition{State: StateDenied, At: now, Actor: brokerSourceID})
+		b.recordLocked(decision, effect, "deny: reviewer "+review.ReviewerID+" denied")
+		b.effects[scoped] = effect
+		return cloneEffect(effect), decision, nil
+	}
+
+	if review.Verdict == ReviewAllow {
+		stored, decision := b.decideLocked(principal, effect, now)
+		return stored, decision, nil
+	}
+
+	// WATCH or ABSTAIN: the hold stands, the arrival is journaled.
+	decision := &BrokerDecision{
+		Verdict:         "hold",
+		Reason:          "review_" + strings.ToLower(review.Verdict),
+		PolicyRefs:      []string{b.policy.ref("operations." + effect.ProposedAction.Operation)},
+		DeterminedAt:    now,
+		EvidenceEventID: mintEventIDSoon(),
+	}
+	b.recordLocked(decision, effect, "hold: reviewer "+review.ReviewerID+
+		" returned "+review.Verdict+"; only ALLOW releases a hold")
+	b.effects[scoped] = effect
 	return cloneEffect(effect), decision, nil
+}
+
+// ReplacePolicy swaps the active policy document (a supply-chain
+// operation, spec 19). Permits already minted keep their bound digest;
+// at dispatch, a permit whose digest no longer matches the active
+// policy is fenced as EXPIRED (spec 10 version binding).
+func (b *Broker) ReplacePolicy(policy *Policy) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.policy = policy
+}
+
+// fenceEvent journals a pre-dispatch fence as a broker_decision.
+func (b *Broker) fenceEvent(effect *Effect, reason, detail, at string) EvidenceEvent {
+	event := EvidenceEvent{
+		Kind:       "EvidenceEvent",
+		APIVersion: "v1",
+		ID:         mintEventIDSoon(),
+		TenantID:   effect.TenantID,
+		RunID:      effect.RunID,
+		EventKind:  "broker_decision",
+		TrustLabel: "collector_fact",
+		Source:     EventSource{ID: brokerSourceID, Component: "broker"},
+		ObservedAt: at,
+		EffectID:   effect.ID,
+		Payload: inlinePayload(map[string]any{
+			"verdict": "deny",
+			"reason":  reason,
+			"detail":  detail,
+		}),
+	}
+	event.Sequence = b.nextSequence(brokerSourceID)
+	return event
 }
 
 // permitExpiry mints the permit window: the five-minute TTL clamped
@@ -518,6 +682,17 @@ func (b *Broker) dispatchLocked(effect *Effect, now, idemKey string) (*Effect, e
 		return nil, &TransitionError{EffectID: effect.ID, From: effect.State,
 			Why: "permit task binding does not match the run"}
 	}
+	if permit.PolicyDigest != b.policy.digest {
+		// Authorization binds the policy version and digest (spec 10).
+		// A permit minted under a policy the deployment has since
+		// replaced is stale: the scope and limits it carries may no
+		// longer be the ones the operator set. It expires instead of
+		// dispatching; the worker re-proposes under the new version.
+		b.transitionTo(effect, StateExpired, now)
+		return nil, &TransitionError{EffectID: effect.ID, From: StateExpired,
+			Why: "policy changed since authorization " + permit.PolicyVersion +
+				"; the permit's version binding is stale"}
+	}
 
 	// A stopped run fences permits minted before the stop (spec 13.3:
 	// revoke new effect permits — and a permit that already exists
@@ -556,6 +731,31 @@ func (b *Broker) dispatchLocked(effect *Effect, now, idemKey string) (*Effect, e
 	if sink == nil {
 		return nil, &TransitionError{EffectID: effect.ID, From: effect.State,
 			Why: "no sink owns destination " + effect.ProposedAction.Destination}
+	}
+
+	// Resource-version binding, where the sink supports a conditional
+	// check (spec 10, F15): the dispatch happens only when the
+	// resource still carries the version the proposal pinned. A
+	// time-of-check/time-of-use mismatch cancels the effect before
+	// anything is sent; an unverifiable binding never dispatches.
+	if permit.ResourceVersion != "" {
+		if versioned, ok := sink.(VersionedSink); ok {
+			staged := cloneEffect(effect)
+			b.mu.Unlock()
+			current, err := versioned.VerifyResourceVersion(staged)
+			b.mu.Lock()
+			if err != nil || current != permit.ResourceVersion {
+				why := "resource changed after authorization: permitted " +
+					permit.ResourceVersion + ", observed " + current
+				if err != nil {
+					why = "resource version check failed: " + err.Error()
+				}
+				b.appendEvent(b.fenceEvent(effect, "resource_version_mismatch", why, now))
+				b.transitionTo(effect, StateCancelled, now)
+				return nil, &TransitionError{EffectID: effect.ID, From: StateCancelled,
+					Why: why}
+			}
+		}
 	}
 
 	// Preparation phase (spec 10.1): where the service supports
@@ -912,6 +1112,39 @@ var errNotFound = fmt.Errorf("effect not found")
 // errEffectExists refuses a re-proposal under an id that already has
 // a lifecycle (append-only, spec 18.1).
 var errEffectExists = fmt.Errorf("effect id already has a record")
+
+// errReviewDenyFinal refuses to overrule a review DENY: hard denies
+// cannot be outvoted (spec 11.2).
+var errReviewDenyFinal = fmt.Errorf(
+	"a review DENY is final; no later ALLOW can outvote it")
+
+// errReviewNotRequired refuses reviews on effects whose rule never
+// demanded one: a reviewer cannot mint authority over arbitrary
+// effects (spec 11.2).
+var errReviewNotRequired = fmt.Errorf(
+	"the operation's rule does not require a review; there is nothing to attach")
+
+// ReviewContractError carries the review decision contract problems
+// (spec 11.2) for a 422 problem body.
+type ReviewContractError struct {
+	Problems []ContractError
+}
+
+func (e *ReviewContractError) Error() string {
+	if len(e.Problems) == 0 {
+		return "review violates the decision contract"
+	}
+	return fmt.Sprintf("review violates the decision contract: %s at %s: %s",
+		e.Problems[0].Check, e.Problems[0].Path, e.Problems[0].Detail)
+}
+
+// cloneReview deep-copies a review decision.
+func cloneReview(review *Review) *Review {
+	duplicate := *review
+	duplicate.PolicyRefs = append([]string(nil), review.PolicyRefs...)
+	duplicate.EventRefs = append([]string(nil), review.EventRefs...)
+	return &duplicate
+}
 
 // errIdempotencyConflict and errIdempotencyPending distinguish the
 // two reservation failures (spec 18.3).

@@ -45,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/effects/authorizations", s.authorize)
 	mux.HandleFunc("POST /v1/effects/{id}/commit", s.commit)
+	mux.HandleFunc("POST /v1/effects/{id}/review", s.review)
 	mux.HandleFunc("POST /v1/delegations", s.delegate)
 	mux.HandleFunc("POST /v1/delegations/{id}/revocation", s.revokeDelegation)
 	mux.HandleFunc("POST /v1/runs/{id}/stop", s.stopRun)
@@ -179,11 +180,88 @@ func (s *Server) commit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, effect)
 }
 
+// review attaches a machine-review decision to a held effect and
+// re-runs the deterministic decision (spec 10, 11.1, 11.2). Reviews
+// come from the supervisor system, never the worker.
+func (s *Server) review(w http.ResponseWriter, r *http.Request) {
+	requestID := newRequestID()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",
+			"request body could not be read", false)
+		return
+	}
+	key := r.Header.Get(HeaderIdem)
+	if !reIdemKey.MatchString(key) {
+		writeProblem(w, requestID, http.StatusBadRequest, "idempotency_key_required",
+			"mutations require an Idempotency-Key matching idk_[A-Za-z0-9_-]{8,128}", false)
+		return
+	}
+	effectID := r.PathValue("id")
+	if !reEffectID.MatchString(effectID) {
+		writeProblem(w, requestID, http.StatusBadRequest, "effect_id_invalid",
+			"effect id must match eff_[a-z0-9]{8,64}", false)
+		return
+	}
+	principal := principalFrom(r)
+	if err := s.Broker.CheckAuthority(principal); err != nil {
+		writeAuthProblem(w, requestID, err)
+		return
+	}
+	digest := bodyDigest(body)
+	reply, replay, err := s.Broker.Reserve(principal.TenantID, key, digest)
+	if err != nil {
+		writeReservationProblem(w, requestID, err)
+		return
+	}
+	if replay {
+		writeJSON(w, http.StatusOK, reply)
+		return
+	}
+
+	review, err := DecodeReview(body)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		writeProblem(w, requestID, http.StatusBadRequest, "review_schema",
+			err.Error(), false)
+		return
+	}
+	effect, decision, err := s.Broker.AttachReview(principal, effectID, review)
+	if err != nil {
+		s.Broker.Release(principal.TenantID, key, digest)
+		var contract *ReviewContractError
+		var transition *TransitionError
+		switch {
+		case errors.Is(err, errNotFound):
+			writeProblem(w, requestID, http.StatusNotFound, "effect_not_found",
+				"no such effect for this tenant", false)
+		case errors.Is(err, errReviewDenyFinal):
+			writeProblem(w, requestID, http.StatusConflict, "review_deny_final",
+				err.Error(), false)
+		case errors.Is(err, errReviewNotRequired):
+			writeProblem(w, requestID, http.StatusConflict, "review_not_required",
+				err.Error(), false)
+		case errors.As(err, &contract):
+			writeProblem(w, requestID, http.StatusUnprocessableEntity, "review_schema",
+				"review violates the decision contract (spec 11.2)", false,
+				WithErrors(contract.Problems))
+		case errors.As(err, &transition):
+			writeProblem(w, requestID, http.StatusConflict, "invalid_transition",
+				transition.Error(), false, WithState(transition.From))
+		default:
+			writeAuthProblem(w, requestID, err)
+		}
+		return
+	}
+	replyValue := authorizationReply{Effect: effect, Decision: decision}
+	s.Broker.Complete(principal.TenantID, key, digest, replyValue)
+	writeJSON(w, http.StatusOK, replyValue)
+}
+
 // delegate mints a child delegation after the narrowing rules
 // (spec 10, AC-008). Service and operator roles only: a worker never
 // mints capability for itself.
-func (s *Server) delegate(w http.ResponseWriter, r *http.Request) {
-	requestID := newRequestID()
+func (s *Server) delegate(w http.ResponseWriter, r *http.Request) {	requestID := newRequestID()
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
 		writeProblem(w, requestID, http.StatusBadRequest, "body_unreadable",

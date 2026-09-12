@@ -278,7 +278,7 @@ func TestGateDeniesUnknownOperation(t *testing.T) {
 	if verdict.Allowed || verdict.Reason != "unknown_operation" {
 		t.Fatalf("unregistered operation allowed: %+v", verdict)
 	}
-	want := "pol_1.0.0/operations.shell.exec"
+	want := "pol_1.1.0/operations.shell.exec"
 	if len(verdict.PolicyRefs) != 1 || verdict.PolicyRefs[0] != want {
 		t.Fatalf("policy refs: %+v", verdict.PolicyRefs)
 	}

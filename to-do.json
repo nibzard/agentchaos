@@ -487,7 +487,7 @@
       "id": "T017",
       "title": "Implement deterministic supervision gates",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Enforce scope, limits, version binding, and hard denies for every supported external effect without relying on an LLM decision.",
       "depends_on": [
         "T007"
@@ -495,7 +495,20 @@
       "tags": [
         "supervision",
         "policy"
-      ]
+      ],
+      "files": [
+        "broker/contract.go",
+        "broker/policy.go",
+        "broker/policy.json",
+        "broker/broker.go",
+        "broker/server.go",
+        "broker/gates_test.go",
+        "broker/crosslang_test.go",
+        "broker/policy_test.go",
+        "broker/README.md",
+        "shared/schemas/effect.schema.json"
+      ],
+      "updated_at": "2026-09-12T11:00:00Z"
     },
     {
       "id": "T018",

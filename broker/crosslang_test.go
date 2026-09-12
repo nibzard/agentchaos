@@ -140,6 +140,43 @@ func TestEmittedDocumentsValidateAgainstSharedSchemas(t *testing.T) {
 	}
 	documents["effect_reconciled"] = reconciled
 
+	// Review-gated pushes (spec 10, 11.1, 11.2): a held effect, the
+	// same effect authorized by an ALLOW review, a committed push with
+	// the resource version bound into the permit, and a reviewer DENY.
+	pushes := testBroker(t, &githubSink{current: "commit-7f3a"})
+	held, heldDecision, err := pushes.Authorize(
+		servicePrincipal(), pushEffect("eff_100000000000000f", "commit-7f3a"))
+	if err != nil || heldDecision.Verdict != "hold" {
+		t.Fatalf("review hold: %v %+v", err, heldDecision)
+	}
+	documents["effect_review_held"] = held
+	reviewed, allowDecision, err := pushes.AttachReview(
+		servicePrincipal(), "eff_100000000000000f", review(ReviewAllow))
+	if err != nil || allowDecision.Verdict != "allow" {
+		t.Fatalf("review allow: %v %+v", err, allowDecision)
+	}
+	documents["effect_review_allowed"] = reviewed
+	pushed, err := pushes.Commit(servicePrincipal(), "eff_100000000000000f", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	documents["effect_push_committed"] = pushed
+	refused, _, err := pushes.Authorize(
+		servicePrincipal(), pushEffect("eff_1000000000000010", "commit-7f3a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deniedByReview, _, err := pushes.AttachReview(
+		servicePrincipal(), "eff_1000000000000010", review(ReviewDeny))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = refused
+	documents["effect_review_denied"] = deniedByReview
+	for i, event := range pushes.Events() {
+		documents[fmt.Sprintf("event_review_%02d", i)] = event
+	}
+
 	// Delegation documents: a tree root, a nested child, and a
 	// revoked node with its fence timestamp (spec 10).
 	delegations := testBroker(t, &SyntheticSink{})

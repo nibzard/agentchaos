@@ -88,6 +88,7 @@ type ProposedAction struct {
 	Operation       string `json:"operation"`
 	Resource        string `json:"resource"`
 	Destination     string `json:"destination"`
+	ResourceVersion string `json:"resource_version,omitempty"`
 	ArgumentsDigest string `json:"arguments_digest"`
 	SizeBytes       int64  `json:"size_bytes,omitempty"`
 }
@@ -177,9 +178,42 @@ var (
 	proposedActionKeys = map[string]bool{
 		"operation": true, "resource": true, "destination": true,
 		"arguments_digest": true, "size_bytes": true,
+		"resource_version": true,
 	}
 	transitionKeys = map[string]bool{"state": true, "at": true, "actor": true}
+	reviewKeys     = map[string]bool{
+		"verdict": true, "reviewer_id": true, "policy_refs": true,
+		"event_refs": true, "rationale": true, "limitations": true,
+		"model_id": true, "prompt_version": true, "latency_ms": true,
+	}
 )
+
+// DecodeReview parses a machine-review decision body (spec 11.2).
+// Like DecodeProposal, it fails closed on any key that is not the
+// exact contract spelling (AC-001).
+func DecodeReview(data []byte) (*Review, error) {
+	var raw map[string]json.RawMessage
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&raw); err != nil {
+		return nil, fmt.Errorf("malformed review body: %w", err)
+	}
+	if dec.More() {
+		return nil, fmt.Errorf("trailing content after JSON document")
+	}
+	for key := range raw {
+		if !reviewKeys[key] {
+			return nil, fmt.Errorf(
+				"unknown or misspelled field %q: contract keys are exact snake_case", key)
+		}
+	}
+	strict := json.NewDecoder(bytes.NewReader(data))
+	strict.DisallowUnknownFields()
+	var review Review
+	if err := strict.Decode(&review); err != nil {
+		return nil, fmt.Errorf("unknown or malformed field: %w", err)
+	}
+	return &review, nil
+}
 
 // DecodeProposal parses a request body into an Effect. It rejects
 // trailing content and any key that is not the exact contract
@@ -328,6 +362,47 @@ func (p *ProposedAction) validate() []ContractError {
 	}
 	if p.SizeBytes < 0 || p.SizeBytes > 5368709120 {
 		add("size_bytes", "$.proposed_action.size_bytes", "must be 0..5368709120")
+	}
+	if p.ResourceVersion != "" &&
+		!matches(`^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,127}$`, p.ResourceVersion) {
+		add("resource_version", "$.proposed_action.resource_version",
+			"must be 1..128 characters of letters, digits, and . : / + _ -")
+	}
+	return errs
+}
+
+// Review verdicts (spec 11.2). ABSTAIN is not a benign verdict: only
+// ALLOW can satisfy a review requirement, and DENY cannot be outvoted.
+const (
+	ReviewAllow   = "ALLOW"
+	ReviewWatch   = "WATCH"
+	ReviewDeny    = "DENY"
+	ReviewAbstain = "ABSTAIN"
+)
+
+// ValidateReview checks a machine-review decision against the review
+// decision contract (spec 11.2): a verdict from the enum, a reviewer
+// identity, a rationale, and a non-negative latency.
+func (r *Review) ValidateReview() []ContractError {
+	var errs []ContractError
+	add := func(check, path, detail string) {
+		errs = append(errs, ContractError{Check: check, Path: path, Detail: detail})
+	}
+	switch r.Verdict {
+	case ReviewAllow, ReviewWatch, ReviewDeny, ReviewAbstain:
+	default:
+		add("verdict", "$.review.verdict",
+			"must be ALLOW, WATCH, DENY, or ABSTAIN (spec 11.2)")
+	}
+	if !reActorID.MatchString(r.ReviewerID) {
+		add("reviewer_id", "$.review.reviewer_id",
+			"must match act_[a-z0-9][a-z0-9-]{3,63}; a reviewer is an actor of the supervisor system")
+	}
+	if len(r.Rationale) < 1 || len(r.Rationale) > 2000 {
+		add("rationale", "$.review.rationale", "must be 1..2000 characters")
+	}
+	if r.LatencyMS < 0 {
+		add("latency_ms", "$.review.latency_ms", "must be zero or more")
 	}
 	return errs
 }
