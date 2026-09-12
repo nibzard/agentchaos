@@ -780,7 +780,7 @@
       "id": "T029",
       "title": "Implement the acx CLI",
       "priority": 1,
-      "status": "todo",
+      "status": "done",
       "details": "Support validate, run, compare, inspect, stop, report, and assurance explain commands with stable exit codes 0, 2, 3, 4, and 5.",
       "depends_on": [
         "T003",
@@ -792,7 +792,15 @@
       "tags": [
         "cli",
         "developer-experience"
-      ]
+      ],
+      "files": [
+        "cli/go.mod",
+        "cli/acx/main.go",
+        "cli/app/app.go",
+        "cli/app/app_test.go",
+        "cli/README.md"
+      ],
+      "updated_at": "2026-09-12T00:00:00Z"
     },
     {
       "id": "T030",
