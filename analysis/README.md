@@ -79,3 +79,36 @@ amounts, and anonymous workloads.
 report, err := analysis.AccountCosts(entries)
 ```
 
+
+## Portable report export
+
+`ExportReport` (T030, spec 17.5) assembles one document a pipeline
+can gate on, and renders it twice from the same document:
+`RenderJSON` for machines, `RenderText` for humans.
+
+The export states its facts and refuses to invent the rest:
+
+- The **environment** is `synthetic` or `production`, and the title
+  carries the distinction as well as the metadata. There is no
+  default; anything else refuses to export.
+- **Artifacts** are named by `sha256:` content digest. Nameless,
+  duplicated, negative-size, or fake-digest artifacts refuse.
+- **Evidence references** name the chain head digest, the event
+  count, and the assurance claim ids (`clm_` plus 16 hex).
+- The **gate** derives per run from the recorded governor state and
+  rolls up: only a stopped run with terminal state `CLEAN` passes; a
+  fence or `DIRTY_QUARANTINED` fails; `UNKNOWN`, missing terminal
+  states, and active runs stay `inconclusive`. A pass is never
+  inferred from absence.
+- Embedded `Comparison` and `CostReport` documents keep their
+  limitations, beside the standing note that a passed gate speaks to
+  the declared scope only, never to universal safety.
+
+Artifacts, runs, profiles, and claims sort deterministically, so two
+exports of one input are byte-identical.
+
+```go
+report, err := analysis.ExportReport(input)
+machine, err := analysis.RenderJSON(report)
+readable := analysis.RenderText(report)
+```
